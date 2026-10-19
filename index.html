@@ -1,0 +1,925 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>body{margin:0}</style>
+<title>AIO診断ツール</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<style>
+/* Layout: 上に入力（ソース貼り付け＋設定値）、下に診断結果を優先度順に縦積み */
+:root{
+  --bg:#eef1f6; --panel:#ffffff; --fg:#17202e; --muted:#586479; --line:#d2d9e4;
+  --accent:#2a4bb8; --accent-fg:#ffffff; --chip:#e4e9f2; --code:#f5f7fb;
+  --hi:#b3261e; --hi-bg:#fbe7e5; --mid:#9a5b00; --mid-bg:#fff0d6; --lo:#456079; --lo-bg:#e3ebf3; --ok:#1e7a4c;
+  --font-ui:"Zen Kaku Gothic New","Yu Gothic",Meiryo,sans-serif;
+  --font-data:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#10151f; --panel:#182030; --fg:#e6ebf4; --muted:#96a3ba; --line:#2b3649;
+  --accent:#8aa4ff; --accent-fg:#0d1426; --chip:#222d42; --code:#111827;
+  --hi:#ff8f86; --hi-bg:#3d1c1a; --mid:#f2b45c; --mid-bg:#3b2a0e; --lo:#9db8d3; --lo-bg:#1f2e3f; --ok:#5fd39a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10151f; --panel:#182030; --fg:#e6ebf4; --muted:#96a3ba; --line:#2b3649;
+  --accent:#8aa4ff; --accent-fg:#0d1426; --chip:#222d42; --code:#111827;
+  --hi:#ff8f86; --hi-bg:#3d1c1a; --mid:#f2b45c; --mid-bg:#3b2a0e; --lo:#9db8d3; --lo-bg:#1f2e3f; --ok:#5fd39a; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-ui);font-size:15px;line-height:1.65;padding-inline:16px;padding-block:20px}
+.wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1{font-size:1.5rem;margin:0;font-weight:700;text-wrap:balance}
+.lead{margin:2px 0 0;color:var(--muted)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px;display:flex;flex-direction:column;gap:14px;min-width:0}
+h2{font-size:.78rem;letter-spacing:.08em;color:var(--muted);margin:0;font-weight:700}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+label{font-size:.9rem}
+select,textarea,input[type=text],button{font:inherit;color:inherit}
+textarea,input[type=text]{background:var(--code);border:1px solid var(--line);border-radius:4px;padding:6px 8px;width:100%}
+textarea{font-family:var(--font-data);font-size:.78rem;min-height:170px;resize:vertical}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+details.opt summary{cursor:pointer;font-size:.9rem;color:var(--accent);font-weight:500}
+details.opt[open] summary{margin-bottom:10px}
+.chk{display:flex;gap:8px;align-items:flex-start;cursor:pointer}
+.chk input{margin-top:.45em}
+button{background:var(--chip);border:1px solid var(--line);border-radius:4px;padding:7px 14px;cursor:pointer}
+button.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent);font-weight:700}
+button:hover{filter:brightness(.95)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.note{font-size:.82rem;color:var(--muted);margin:0}
+.sum{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+.score{font-family:var(--font-data);font-size:2.6rem;font-weight:500;line-height:1;font-variant-numeric:tabular-nums}
+.score small{font-size:.9rem;color:var(--muted)}
+.bar{flex:1;min-width:160px;height:10px;background:var(--chip);border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent)}
+.cnt{display:flex;gap:6px;flex-wrap:wrap}
+.pill{font-size:.82rem;border-radius:3px;padding:2px 9px;font-weight:700}
+.pill.hi{background:var(--hi-bg);color:var(--hi)} .pill.mid{background:var(--mid-bg);color:var(--mid)} .pill.lo{background:var(--lo-bg);color:var(--lo)}
+.list{display:flex;flex-direction:column;gap:10px}
+.item{border:1px solid var(--line);border-left-width:5px;border-radius:4px;padding:10px 14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.item.hi{border-left-color:var(--hi)} .item.mid{border-left-color:var(--mid)} .item.lo{border-left-color:var(--lo)}
+.item h3{margin:0;font-size:1rem;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.tag{font-size:.72rem;font-family:var(--font-data);border:1px solid var(--line);border-radius:3px;padding:0 6px;color:var(--muted);white-space:nowrap}
+.item p{margin:0;font-size:.9rem}
+.fix{color:var(--fg)} .fix b{color:var(--accent)}
+.ev{font-family:var(--font-data);font-size:.76rem;background:var(--code);border-radius:3px;padding:6px 8px;display:flex;flex-direction:column;gap:2px;overflow-x:auto}
+.ev span{white-space:pre-wrap;word-break:break-all}
+.donerow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+label.done{display:inline-flex;gap:8px;align-items:center;font-size:.9rem;font-weight:700;cursor:pointer;background:var(--chip);border-radius:4px;padding:3px 10px}
+label.done input{width:1.1em;height:1.1em;margin:0}
+.tag.okv{color:var(--ok);border-color:var(--ok)}
+.item.done{opacity:.62}
+.item.done h3{text-decoration:line-through;text-decoration-thickness:1px}
+.prog{display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:.9rem;font-weight:700}
+.prog .bar{flex:1;min-width:140px}
+.pill.ok{background:var(--lo-bg);color:var(--ok)}
+.subh{margin:6px 0 0;font-size:.95rem}
+ul.fixedlist{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px;font-size:.9rem}
+a.btnlink{display:inline-block;background:var(--accent);color:var(--accent-fg);border-radius:4px;padding:7px 14px;font-weight:700;text-decoration:none;font-size:.9rem}
+a.btnlink:hover{filter:brightness(.95)}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:4px}
+table.spt{border-collapse:collapse;width:100%;min-width:560px;font-size:.85rem}
+table.spt th,table.spt td{border-bottom:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top;white-space:nowrap}
+table.spt th{background:var(--chip);font-weight:700}
+table.spt tr:last-child td{border-bottom:0}
+table.spt td.num{font-family:var(--font-data);font-variant-numeric:tabular-nums}
+table.spt td.memo{white-space:normal;min-width:8em}
+td.ch.up{color:var(--ok);font-weight:700}
+td.ch.down{color:var(--hi);font-weight:700}
+.spwarn{background:var(--hi-bg);color:var(--hi);border-left:4px solid var(--hi);border-radius:0 4px 4px 0;padding:8px 12px;font-size:.9rem;margin:0}
+.spok{background:var(--lo-bg);color:var(--ok);border-left:4px solid var(--ok);border-radius:0 4px 4px 0;padding:8px 12px;font-size:.9rem;margin:0;font-weight:500}
+details.howto{border-top:1px dashed var(--line);padding-top:6px}
+details.howto summary{font-size:.88rem;font-weight:700;color:var(--accent)}
+.hb{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.hb .why{font-size:.88rem}
+ol.steps{margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:4px;font-size:.9rem}
+.exs{display:flex;flex-direction:column;gap:4px;background:var(--code);border-radius:4px;padding:8px 10px;font-size:.85rem}
+.exs .k{display:inline-block;min-width:5.6em;font-size:.72rem;font-weight:700;color:var(--muted)}
+.exs div{overflow-wrap:anywhere}
+.hb .warn{font-size:.85rem;color:var(--mid)}
+.hb .warn.danger{color:var(--hi);background:var(--hi-bg);border-left:4px solid var(--hi);border-radius:0 4px 4px 0;padding:8px 12px;font-size:.9rem;font-weight:500}
+dl.words{margin:0;display:grid;grid-template-columns:max-content 1fr;gap:4px 12px;font-size:.85rem;background:var(--code);border-radius:4px;padding:8px 10px}
+dl.words dt{font-family:var(--font-data);font-weight:500}
+dl.words dd{margin:0;overflow-wrap:anywhere}
+@media(max-width:520px){dl.words{grid-template-columns:1fr}}
+.pairs{display:flex;flex-direction:column;gap:8px}
+.pair{background:var(--code);border-radius:4px;padding:8px 10px;display:flex;flex-direction:column;gap:4px;overflow-x:auto}
+.pl{display:flex;gap:10px;align-items:baseline;font-size:.85rem}
+.pl .k{flex:0 0 4.6em;font-size:.72rem;color:var(--muted);font-weight:700}
+.pl .t{font-family:var(--font-data);font-size:.8rem;white-space:pre-wrap;word-break:break-all;min-width:0}
+mark.del{background:var(--hi-bg);color:var(--hi);border-radius:2px;padding:0 2px}
+mark.add{background:var(--lo-bg);color:var(--ok);border-radius:2px;padding:0 2px;font-weight:500}
+.inv{font-family:var(--font-ui);font-size:.72rem;border:1px dashed currentColor;border-radius:2px;padding:0 3px}
+.ver{font-family:var(--font-data);background:var(--chip);border-radius:3px;padding:1px 8px}
+ol.guide{margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:6px;font-size:.92rem}
+ul.pass{margin:8px 0 0;padding-left:1.2em;font-size:.88rem;color:var(--muted)}
+ul.pass li{margin:2px 0}
+details summary{cursor:pointer}
+#msg{min-height:1.4em;font-size:.85rem;color:var(--ok)}
+.lg{font-size:.85rem;color:var(--muted)}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>AIO診断ツール</h1>
+    <p class="lead">ページのHTMLソースを貼り付けると、AI検索に拾われやすくするための改善点を優先度順に出します。1回に診断できるのは1ページです。処理はこのページ内だけで行い、外部には送信しません。</p>
+  </header>
+
+  <section class="panel">
+    <h2>バージョンと更新履歴</h2>
+    <p style="margin:0"><b class="ver" id="ver">v1.16</b>　最終更新 2026/10/14　<span class="note">更新の内容は、「更新履歴を見る」で確認できます。</span></p>
+    <details>
+      <summary>更新履歴を見る</summary>
+      <ul class="pass" id="changelog">
+        <li><b>v1.16（2026/10/14）</b>　「修正後のソースで、直っているか確認する」欄を追加（修正前の診断と比べて、直った／まだ残っている／新しく出た、を表示）。各指摘に「修正が完了した」のチェックと、完了件数の表示を追加。修正後のソースで直っていた項目は自動でチェックが付く。チェックは「→修正済」として修正一覧のコピーにも反映。ページのURL欄を追加（ページごとにチェックと修正前のソースをこのブラウザに保存）。診断項目と判定基準は変更なし。</li>
+        <li><b>v1.15（2026/10/14）</b>　診断項目を追加：KIZUNA AIO設定「既定OGP画像URL」の確認。画像ファイルのURL（https:// で始まる .jpg / .png など）か、1200×630px 程度か。設定値の入力欄に、URL・幅・高さを追加。サイズは、入力した値、ページの og:image:width / height、ファイル名の数字の順で判断。</li>
+        <li><b>v1.14（2026/10/14）</b>　「h1の直後に説明文がない」の指摘を廃止（WordPressの仕様で改善できないため）。h1直後が挨拶文・長すぎる場合の指摘は、そのまま。</li>
+        <li><b>v1.13（2026/10/14）</b>　「表示速度を測って、修正の前後で比べる」機能を追加。PageSpeed Insights の数字（点数・FCP・LCP・TBT・CLS・Speed Index）を記録し、修正前と修正後を中央値で比較して「良くなった／悪くなった／ほぼ同じ」を表示。Lighthouse のJSONから数字を自動で読み取ることも可能。記録はこのブラウザの中だけに保存。診断項目と判定基準は変更なし。</li>
+        <li><b>v1.12（2026/10/06）</b>　「画面の表示を止めるJavaScript」の指摘から除外するJSを7つ追加（計13ファイル）。バージョンが違うものは除外されません。</li>
+        <li><b>v1.11（2026/10/06）</b>　「画面の表示を止めるJavaScript」の指摘から、あってもよいと指定された6つのJSを除外。除外したものは「問題なしの項目」に表示。</li>
+        <li><b>v1.10（2026/10/06）</b>　診断項目を2つ追加：「ファーストビューより下の画像に fetchpriority=&quot;high&quot; が付いている」「ファーストビューより下の画像に loading=&quot;lazy&quot; が付いていない」。ページの上から4枚目以降の画像を対象に、中学生でも分かる説明と直し方を表示。</li>
+        <li><b>v1.9（2026/10/06）</b>　診断項目を1つ追加：「メインビジュアルがCSSの背景画像になっている可能性がある」。preload を入れる方法と &lt;img&gt; に変える方法、スライダーの2枚目以降は最初に読ませない注意を、中学生でも分かる説明で表示。</li>
+        <li><b>v1.8（2026/10/06）</b>　診断項目を1つ追加：「画面の表示を止めるJavaScript（headのscriptに defer / async が付いていない）」。中学生でも分かる説明と、付けてよいか確かめる手順、スライダー系に付けてはいけない注意を表示。</li>
+        <li><b>v1.7（2026/10/05）</b>　各指摘の下に「なぜAIに必要か・直し方の手順・例」を表示。手順の開閉ボタンと、直したあとの確認を追加。診断項目と判定基準は変更なし。</li>
+        <li><b>v1.6（2026/09/30）</b>　パンくずリストの確認を廃止。ほかの診断項目と判定基準は変更なし。</li>
+        <li><b>v1.5（2026/09/30）</b>　郵便番号の誤検出を修正。電話番号の後ろ半分（例：234-5678）を郵便番号として指摘していた不具合を直した。ほかの診断項目と判定基準は変更なし。</li>
+        <li><b>v1.4（2026/09/30）</b>　機械的に直せる表記の指摘（全角数字・全角英字・半角カナ・全角スペース・ゼロ幅文字・チルダ・半角カッコ・助詞の重複・電話番号・郵便番号）で、「現在文章」と「変更提案」を並べて表示。修正一覧のコピーにも反映。診断項目と判定基準は変更なし。</li>
+        <li><b>v1.3（2026/09/30）</b>　バージョンを更新。診断項目と判定基準は変更なし。</li>
+        <li><b>v1.2（2026/09/29）</b>　見やすさ・使いやすさへの意見の窓口を追加。診断項目と判定基準は固定。</li>
+        <li><b>v1.1（2026/09/29）</b>　バージョン表示と更新履歴を追加。制作メンバー向けの使い方を追加。</li>
+        <li><b>v1.0（2026/09/29）</b>　初版。基本タグ・見出し・冒頭の書き方・構造化データ・画像・表記・会社概要ページ・KIZUNA AIO設定値の突き合わせを診断。</li>
+      </ul>
+    </details>
+  </section>
+
+  <section class="panel">
+    <h2>はじめに（使い方）</h2>
+    <ol class="guide">
+      <li>診断したいページをブラウザで開き、<b>Ctrl+U</b>（Macは Cmd+Option+U）でソースを表示して全選択コピーします。ログイン後の画面でなく、公開されている表示のソースを使ってください。</li>
+      <li>下の欄に貼り付けて「診断する」を押します。会社概要・店舗情報のページなら、チェックを入れてください。</li>
+      <li>結果の<b>【A】</b>はそのまま直せる項目、<b>【B】</b>はクライアント確認が必要な項目です。「修正一覧をコピー」で、ノートやチケットに貼れる形になります。</li>
+    </ol>
+    <p class="note">このツールは貼り付けたソースを読むだけで、サイトへの書き込みや外部への送信はしません。貼り付けた内容はページを閉じると消えます。1回に診断できるのは1ページです。全ページ分を順に診断して、表記ブレを見比べてください。</p>
+  </section>
+
+  <section class="panel">
+    <h2>1. ソースを入れる</h2>
+    <p class="note" id="sampleNote" hidden>いま入っているのは動作確認用の架空のサンプルです。実際のページのソースに置き換えてください。</p>
+    <div class="field">
+      <label for="src">ページのHTMLソース（ブラウザで Ctrl+U → 全選択コピー、または開発者ツールの html 要素をコピー）</label>
+      <textarea id="src" spellcheck="false"></textarea>
+    </div>
+    <div class="field"><label for="pg_url">このページのURL（任意）</label>
+      <input type="text" id="pg_url" placeholder="https://example.com/about/">
+      <p class="note">URLを入れると、ページごとに「修正が完了した」のチェックを覚えます。「診断する」を押すと、この修正前のソースがこのブラウザに保存され、あとで修正後のソースと比べられます。</p></div>
+    <label class="chk"><input type="checkbox" id="isCompany"><span>このページは会社概要／店舗情報の正本ページ（正式名称・代表者名・事業内容の3点を確認する）</span></label>
+    <details class="opt">
+      <summary>KIZUNA AIO設定値と突き合わせる（任意）</summary>
+      <div class="settings">
+        <div class="field"><label for="s_name">名称</label><input type="text" id="s_name" placeholder="株式会社サンプル工房"></div>
+        <div class="field"><label for="s_rep">代表者名</label><input type="text" id="s_rep"></div>
+        <div class="field"><label for="s_tel">電話</label><input type="text" id="s_tel" placeholder="03-0000-0000"></div>
+        <div class="field"><label for="s_addr">住所</label><input type="text" id="s_addr"></div>
+        <div class="field"><label for="s_est">設立年</label><input type="text" id="s_est" placeholder="2005"></div>
+        <div class="field" style="grid-column:1/-1"><label for="s_ogp">既定OGP画像URL（画像・SNS の欄）</label><input type="text" id="s_ogp" placeholder="https://example.com/wp-content/uploads/ogp.jpg"></div>
+        <div class="field"><label for="s_ogw">既定OGP画像の幅（px）</label><input type="text" id="s_ogw" inputmode="numeric" placeholder="1200"></div>
+        <div class="field"><label for="s_ogh">既定OGP画像の高さ（px）</label><input type="text" id="s_ogh" inputmode="numeric" placeholder="630"></div>
+      </div>
+      <p class="note" style="margin-top:8px">設定画面は見るだけで、値を書き換えることはありません。ここに写した値が本文とJSON-LDに出ているかを調べます。</p>
+    </details>
+    <div class="row">
+      <button class="primary" id="run">診断する</button>
+      <button id="loadBefore" hidden>保存した修正前のソースを呼び出す</button>
+      <button id="sample">例に戻す</button>
+      <button id="clear">クリア</button>
+    </div>
+  </section>
+
+  <section class="panel" id="result" aria-live="polite"></section>
+
+  <section class="panel" id="after">
+    <h2>3. 修正後のソースで、直っているか確認する</h2>
+    <p class="note">修正したページのソースを、もう一度貼り付けてください。上の「診断する」で保存した修正前のソースと比べて、直った項目・まだ残っている項目・新しく出た項目を表示します。直っていた項目は、上の結果で自動的にチェックが付きます。設定値の入力欄は、いまの入力内容で診断します。</p>
+    <div class="field"><label for="src2">修正後のHTMLソース</label><textarea id="src2" spellcheck="false"></textarea></div>
+    <div class="row"><button class="primary" id="run2">直っているか確認する</button></div>
+    <div id="after_res" role="status"></div>
+  </section>
+
+  <section class="panel" id="speed">
+    <h2>4. 表示速度を測って、修正の前後で比べる</h2>
+    <p class="note">このツールは、外部のサイトの速度を自動では測れません。Google の「PageSpeed Insights」で測った数字を、ここに記録して比べます。記録はこのブラウザの中だけに残り、ほかの人には共有されません。</p>
+    <ol class="guide">
+      <li>下にURLを入れて、「モバイルで測る」を押す（PageSpeed Insights が新しいタブで開く）。結果が出たら、点数・FCP・LCP・TBT・CLS・Speed Index の数字を読む。</li>
+      <li>区分を「修正前」にして、数字を入れて「この測定を記録」を押す。<b>同じページを3回測って、3回とも記録</b>すると、ばらつきの影響が小さくなる。</li>
+      <li>修正する。<b>1回の修正は1つだけ</b>にする。同じ条件で、また3回測って、区分を「修正後」にして記録する。</li>
+      <li>下の「修正前と修正後の比べ方」に、結果が出る。悪くなった項目があれば、その修正だけを元に戻して確かめる。</li>
+    </ol>
+    <div class="field"><label for="sp_url">測るページのURL</label>
+      <div class="row"><input type="text" id="sp_url" placeholder="https://example.com/" style="flex:1;min-width:200px">
+        <a id="sp_m" class="btnlink" href="#" target="_blank" rel="noopener">モバイルで測る</a>
+        <a id="sp_d" class="btnlink" href="#" target="_blank" rel="noopener">パソコンで測る</a></div></div>
+    <div class="settings">
+      <div class="field"><label for="sp_group">区分</label><select id="sp_group"><option value="before">修正前</option><option value="after">修正後</option></select></div>
+      <div class="field"><label for="sp_note">メモ（何を直したか）</label><input type="text" id="sp_note" placeholder="例：スライダー以外のJSに defer を付けた"></div>
+    </div>
+    <div class="settings">
+      <div class="field"><label for="sp_score">点数（0〜100）</label><input type="text" id="sp_score" inputmode="decimal"></div>
+      <div class="field"><label for="sp_fcp">FCP（秒）</label><input type="text" id="sp_fcp" inputmode="decimal"></div>
+      <div class="field"><label for="sp_lcp">LCP（秒）</label><input type="text" id="sp_lcp" inputmode="decimal"></div>
+      <div class="field"><label for="sp_tbt">TBT（ミリ秒）</label><input type="text" id="sp_tbt" inputmode="decimal"></div>
+      <div class="field"><label for="sp_cls">CLS</label><input type="text" id="sp_cls" inputmode="decimal"></div>
+      <div class="field"><label for="sp_si">Speed Index（秒）</label><input type="text" id="sp_si" inputmode="decimal"></div>
+    </div>
+    <details class="opt">
+      <summary>Lighthouse のJSONを貼り付けて、数字を自動で入れる（任意）</summary>
+      <div class="field"><label for="sp_json">JSON（Chromeの開発者ツール Lighthouse で保存したもの）</label><textarea id="sp_json" spellcheck="false" style="min-height:90px"></textarea></div>
+      <div class="row"><button id="sp_load">JSONから数字を読み取る</button></div>
+    </details>
+    <div class="row"><button class="primary" id="sp_add">この測定を記録</button><button id="sp_clear">記録をすべて消す</button></div>
+    <div id="sp_msg" role="status" style="min-height:1.4em;font-size:.85rem;color:var(--ok)"></div>
+    <h3 style="margin:0;font-size:.95rem">記録した測定</h3>
+    <div class="tw" id="sp_list"></div>
+    <h3 style="margin:0;font-size:.95rem">修正前と修正後の比べ方</h3>
+    <div id="sp_cmp"></div>
+    <div class="row"><button id="sp_copy">比べた結果をコピー</button></div>
+    <details><summary>数字の意味と目安</summary>
+      <ul class="pass">
+        <li><b>点数</b>　全体の点数です。90以上が良い、50未満が悪いとされています。</li>
+        <li><b>FCP</b>　画面に最初の文字や画像が出るまでの時間です。1.8秒以内が良い、3秒より長いと悪いとされています。</li>
+        <li><b>LCP</b>　ページの一番大きな部分が出るまでの時間です。2.5秒以内が良い、4秒より長いと悪いとされています。</li>
+        <li><b>TBT</b>　画面は出たのに、操作できずに待たされる時間です。200ミリ秒以内が良い、600ミリ秒より長いと悪いとされています。</li>
+        <li><b>CLS</b>　読み込み中に画面がずれる大きさです。0.1以下が良い、0.25より大きいと悪いとされています。</li>
+        <li><b>Speed Index</b>　画面が出ていく速さです。3.4秒以内が良い、5.8秒より長いと悪いとされています。</li>
+        <li>測るたびに数字は変わります。比べるときは、<b>同じURL、同じ「モバイル／パソコン」、できれば同じ時間帯</b>で測ってください。</li>
+        <li>変化が5%以内（点数は3点以内、CLSは0.02以内）は、誤差の範囲として「ほぼ同じ」と表示します。</li>
+      </ul>
+    </details>
+  </section>
+
+  <section class="panel" id="feedback">
+    <h2>見やすさ・使いやすさへの意見</h2>
+    <p class="note">ご意見を、画面の表示や使い方の改善に反映します。<b>診断する項目と判定の基準（AIOとして直すべき内容）は固定で、この窓口の意見では変わりません。</b>表示の仕方、文言、並び順、色、操作のしやすさに関する意見をお寄せください。</p>
+    <div class="settings">
+      <div class="field"><label for="f_name">お名前</label><input type="text" id="f_name"></div>
+      <div class="field"><label for="f_kind">種類</label>
+        <select id="f_kind"><option>見た目（色・文字・余白）</option><option>わかりやすさ（文言・説明・並び順）</option><option>使いにくい点（操作）</option><option>その他の表示に関すること</option></select></div>
+      <div class="field"><label for="f_where">対象の場所</label>
+        <select id="f_where"><option>画面全体</option><option>ソースの入力欄</option><option>診断結果の一覧</option><option>修正一覧のコピー</option><option>使い方の説明</option></select></div>
+    </div>
+    <div class="field"><label for="f_body">意見（こうしたら分かりやすい、など）</label><textarea id="f_body" style="min-height:90px;font-family:var(--font-ui);font-size:.9rem"></textarea></div>
+    <div class="row"><button class="primary" id="f_copy">意見をコピー</button><span class="note">コピーした文を、このツールの管理者に送ってください。</span></div>
+    <div id="f_msg" role="status" style="min-height:1.4em;font-size:.85rem;color:var(--ok)"></div>
+  </section>
+</div>
+
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const S="<scr"+"ipt", E="</scr"+"ipt>";
+  const SAMPLE=[
+    '<html lang="ja"><head><meta charset="utf-8"><title>会社概要 | 株式会社サンプル工房</title>',
+    '<meta property="og:title" content="会社概要">',
+    S+' src="/wp-content/plugins/foo/app.js">'+E+S+' src="/wp-content/themes/sample/js/slick.min.js">'+E+S+' src="/wp-content/plugins/bar/ok.js" defer>'+E,
+    '<style>.hero{background-image:url(/img/main.jpg)}</style>',
+    S+' type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"サンプル工房","url":"https://example.com/"}'+E,
+    '</head><body><header><h1>サンプル工房</h1></header><main>',
+    '<h1>会社概要</h1>',
+    '<p>こんにちは、サンプル工房のホームページへようこそ。私たちは長年にわたり、地域の皆さまに寄り添いながら様々なご提案をさせていただいております。どうぞごゆっくりご覧ください。</p>',
+    '<h2>事業について</h2><p>今回は当社の取り組みをご紹介します。木工家具の製作（オーダー対応）を行っています。</p>',
+    '<table><tr><th>会社名</th><td>株式会社サンプル工房</td></tr><tr><th>所在地</th><td>〒１２３‐４５６７ 東京都千代田区サンプル1-2-3</td></tr><tr><th>電話</th><td>03‐1234‐5678</td></tr><tr><th>営業時間</th><td>10:00～18:00（水曜定休）</td></tr></table>',
+    '<h2>よくあるご質問</h2><h3>Q. 納期はどのくらいですか？</h3><p>通常は約1か月です。</p><h3>Q. 修理は可能ですか？</h3><p>はい、可能です。</p>',
+    '<p>詳しくは<a href="/service">こちら</a>をご覧ください。ご相談はをを受け付けています。</p>',
+    '<img src="/img/shop.jpg"><img src="/img/staff.jpg" alt="">',
+    '<img src="/img/work-01.jpg" alt="施工事例1"><img src="/img/footer-banner.jpg" alt="バナー" fetchpriority="high">',
+    '</main></body></html>'
+  ].join("\n");
+
+  const LV={高:0,中:1,低:2}, LVC={高:"hi",中:"mid",低:"lo"};
+  const J=/[぀-ヿ一-鿿]/;
+  const norm=s=>String(s||"").normalize("NFKC").replace(/[\s　]/g,"").replace(/[‐‑–—−ーｰ－]/g,"-");
+  const snip=(t,i,l)=>t.slice(Math.max(0,i-12),i+l+12).replace(/\s+/g," ");
+  function hits(text,re,n){
+    const out=[];const g=new RegExp(re.source,re.flags.includes("g")?re.flags:re.flags+"g");
+    let m;while((m=g.exec(text))&&out.length<(n||5)){out.push(snip(text,m.index,m[0].length));if(m[0].length===0)g.lastIndex++}
+    return out;
+  }
+  const count=(t,re)=>(t.match(new RegExp(re.source,"g"))||[]).length;
+
+  function analyze(src,opt){
+    const doc=new DOMParser().parseFromString(src,"text/html");
+    const F=[],P=[];
+    const add=(lv,kind,title,detail,ev,fix)=>F.push({lv,kind,title,detail,ev:ev||[],fix:fix||""});
+
+    const clone=doc.body.cloneNode(true);
+    clone.querySelectorAll("script,style,noscript,template").forEach(e=>e.remove());
+    const text=clone.textContent||"";
+    const flat=text.replace(/\s+/g," ").trim();
+    const isJa=J.test(flat);
+
+    // ---- title / meta
+    const title=(doc.querySelector("title")||{}).textContent;
+    if(!title||!title.trim())add("高","A","titleタグがない","検索結果やAIの引用元表示で、ページの名前が伝わりません。",[],"ページ内容を表す32文字前後のtitleを設定する。");
+    else if(title.trim().length>60)add("低","A","titleが長い（"+title.trim().length+"文字）","長いと途中で切れます。",[title.trim()],"重要な語を前半に置き、60文字以内にする。");
+    else P.push("titleあり（"+title.trim().length+"文字）");
+
+    const md=doc.querySelector('meta[name="description"]');
+    const mdv=md?(md.getAttribute("content")||"").trim():"";
+    if(!mdv)add("高","A","meta descriptionがない","AIや検索エンジンがページ要約に使う文章がありません。",[],"このページの結論を1〜2文（80〜120文字）で書く。");
+    else if(mdv.length<40||mdv.length>140)add("低","A","meta descriptionの長さが適正でない（"+mdv.length+"文字）","短すぎると情報不足、長すぎると切れます。",[mdv],"80〜120文字に整える。");
+    else P.push("meta descriptionあり（"+mdv.length+"文字）");
+
+    const robots=doc.querySelector('meta[name="robots"]');
+    if(robots&&/noindex/i.test(robots.getAttribute("content")||""))add("高","B","noindexが指定されている","検索にもAIにも出にくくなります。意図した設定か確認が必要です。",[robots.getAttribute("content")],"意図していなければ解除する（依頼主に確認）。");
+    if(!doc.querySelector('link[rel="canonical"]'))add("低","A","canonicalがない","同じ内容のURLが複数あるとき、正本が伝わりません。",[],"正本URLをcanonicalで指定する。");
+    else P.push("canonicalあり");
+    const lang=doc.documentElement.getAttribute("lang");
+    if(isJa&&!(lang||"").toLowerCase().startsWith("ja"))add("低","A","html の lang が ja ではない","言語判定の手がかりが弱くなります。",[String(lang||"(なし)")],'<html lang="ja"> にする。');
+
+    // ---- 画面の表示を止めるJavaScript（head内で defer / async が付いていない script）
+    // 「あってもよい」と指定されたJS（指摘の対象にしない）。増やすときはここに足す
+    const ALLOWJS=[
+      /\/wp-content\/themes\/RAQMO-LP-ligtnning-child-g3\/assets\/js\/(scrolltotop|accordion|animation|jquery\.sticky|sticker|userAgent|scrollclass)\.js(\?|#|$)/i,
+      /\/wp-includes\/js\/jquery\/(jquery|jquery-migrate)\.min\.js(\?|#|$)/i,
+      /cdnjs\.cloudflare\.com\/ajax\/libs\/lightbox2\/2\.11\.4\/js\/lightbox\.min\.js(\?|#|$)/i,
+      /cdn\.jsdelivr\.net\/npm\/slick-carousel@1\.8\.1\/slick\/slick\.min\.js(\?|#|$)/i,
+      /cdn\.jsdelivr\.net\/npm\/gsap@3\.7\.0\/dist\/(gsap|ScrollTrigger)\.min\.js(\?|#|$)/i
+    ];
+    const isAllowJs=s=>ALLOWJS.some(r=>r.test(s.getAttribute("src")||""));
+    const SLIDER=/slick|swiper|carousel|slider|owl|splide|flickity|glide/i;
+    const blocking=[...doc.head.querySelectorAll("script[src]")].filter(s=>!s.hasAttribute("defer")&&!s.hasAttribute("async")&&(s.getAttribute("type")||"").toLowerCase()!=="module"&&!isAllowJs(s));
+    if(blocking.length){
+      const ev=blocking.slice(0,8).map(s=>{const u=s.getAttribute("src");return u.slice(0,100)+(SLIDER.test(u)?"　←スライダー系（defer を付けない可能性が高い）":"")});
+      if(blocking.length>8)ev.push("ほか "+(blocking.length-8)+" 個");
+      add("中","A","画面の表示を止めるJavaScript（headのscript）が"+blocking.length+"個ある","defer も async も付いていない script は、読み込みが終わるまで画面が真っ白のままになります。",ev,"1つずつ「defer を付けてよいか」を確かめてから付ける。スライダー系には付けない。");
+    }else if(doc.head.querySelector("script[src]"))P.push("headのscriptに、画面の表示を止めるものはない（defer / async が付いている、または許可済み）");
+    const allowedHead=[...doc.head.querySelectorAll("script[src]")].filter(s=>!s.hasAttribute("defer")&&!s.hasAttribute("async")&&isAllowJs(s));
+    if(allowedHead.length)P.push("許可済みのJS（指定された13ファイル）は対象外にしました："+allowedHead.length+"個");
+
+    // ---- メインビジュアルがCSSの背景画像（貼り付けたソースの中の style だけで判断する）
+    const HERO=/hero|(^|[^a-z])mv([^a-z]|$)|main[-_]?visual|key[-_]?visual|(^|[^a-z])kv([^a-z]|$)|first[-_]?view|(^|[^a-z])fv([^a-z]|$)|slider|swiper|slide|carousel|banner|jumbotron|top[-_]?image|main[-_]?img/i;
+    const preloaded=[...doc.querySelectorAll('link[rel="preload"][as="image"]')].map(l=>l.getAttribute("href")||"");
+    const fileOf=u=>u.split("?")[0].split("/").pop();
+    const isPre=u=>preloaded.some(p=>p&&(p===u||fileOf(p)===fileOf(u)));
+    const urlOf=s=>{const m=s.match(/background(?:-image)?\s*:[^;}]*?url\(\s*['"]?([^'")]+)['"]?\s*\)/i);return m?m[1]:null};
+    const bgCand=[];
+    [...doc.body.querySelectorAll("*")].forEach((el,i)=>{
+      const st=el.getAttribute("style")||"";if(!/url\(/i.test(st))return;
+      const u=urlOf(st);if(!u||/^data:/i.test(u))return;
+      const cls=(el.getAttribute("class")||"").trim();
+      if(HERO.test((el.id||"")+" "+cls)||i<60)bgCand.push({w:el.tagName.toLowerCase()+(el.id?"#"+el.id:"")+(cls?"."+cls.split(/\s+/)[0]:""),u});
+    });
+    [...doc.querySelectorAll("style")].forEach(s=>{
+      const css=s.textContent||"";const re=/([^{}]+)\{([^{}]*)\}/g;let m;
+      while((m=re.exec(css))){const sel=m[1].trim();if(!HERO.test(sel))continue;const u=urlOf(m[2]);if(u&&!/^data:/i.test(u))bgCand.push({w:sel.slice(0,60),u})}
+    });
+    const bgNew=bgCand.filter(c=>!isPre(c.u));
+    if(bgNew.length){
+      add("中","A","メインビジュアルがCSSの背景画像になっている可能性がある（"+bgNew.length+"か所）","CSSの背景画像は、ブラウザがCSSを読み終わるまで存在に気づけません。そのぶん、画像が出るのが遅れます。",bgNew.slice(0,5).map(c=>c.w+" → "+c.u.slice(0,100)),"最初に見える1枚だけ preload するか、<img> タグに変える。スライダーの2枚目以降は最初に読ませない。");
+    }else if(bgCand.length)P.push("背景画像は、すべて preload されている");
+
+    // ---- ファーストビューより下の画像：fetchpriority="high" の付けすぎ／loading="lazy" の付け忘れ
+    // ソースだけでは「最初に見える範囲」が決まらないため、ページの上から4枚目以降の画像を「見えない範囲の可能性がある」として扱う
+    const bodyImgs=[...doc.body.querySelectorAll("img")].filter(i=>!i.closest("noscript")&&!/^[01]$/.test(i.getAttribute("width")||""));
+    const imgBelow=bodyImgs.slice(3);
+    const srcOf=i=>(i.getAttribute("src")||i.getAttribute("data-src")||"(src不明)").slice(0,100);
+    const hiBelow=imgBelow.filter(i=>(i.getAttribute("fetchpriority")||"").toLowerCase()==="high");
+    if(hiBelow.length)add("中","A","ファーストビューより下の画像に fetchpriority=\"high\" が付いている可能性がある（"+hiBelow.length+"枚）","「急ぎ」の印が多いと、いちばん大事なメインビジュアルと読み込みを取り合います。",hiBelow.slice(0,5).map(srcOf),"最初に見える範囲の外の画像から fetchpriority=\"high\" を外す。");
+    else if(imgBelow.length)P.push("ページの下のほうの画像に fetchpriority=\"high\" は付いていない");
+    const isLazy=i=>(i.getAttribute("loading")||"").toLowerCase()==="lazy"||i.hasAttribute("data-src")||i.hasAttribute("data-lazy-src")||i.hasAttribute("data-lazy")||/lazy/i.test(i.getAttribute("class")||"");
+    const noLazy=imgBelow.filter(i=>!isLazy(i));
+    if(noLazy.length)add("中","A","ファーストビューより下の画像に loading=\"lazy\" が付いていない可能性がある（"+noLazy.length+"枚）","見えていない画像まで最初に全部読み込むと、大事な画像が遅くなり、ページも重くなります。",noLazy.slice(0,5).map(srcOf),"最初に見える範囲の外の画像に loading=\"lazy\" を付ける。");
+    else if(imgBelow.length)P.push("ページの下のほうの画像は、すべて loading=\"lazy\" になっている");
+
+    // ---- headings
+    const hs=[...doc.querySelectorAll("h1,h2,h3,h4,h5,h6")];
+    const h1s=hs.filter(h=>h.tagName==="H1");
+    if(!h1s.length)add("高","A","h1がない","ページの主題が見出しで示されていません。",[],"ページの主題を表すh1を1つ置く。");
+    else if(h1s.length>1)add("中","A","h1が"+h1s.length+"個ある","主題が複数あるように見えます。",h1s.map(h=>h.textContent.trim().slice(0,60)),"ページ見出しだけをh1にし、他はh2以下に下げる。");
+    else P.push("h1は1つ");
+    const skips=[];let prev=0;
+    hs.forEach(h=>{const l=+h.tagName[1];if(prev&&l>prev+1)skips.push("h"+prev+" → h"+l+"："+h.textContent.trim().slice(0,40));prev=l});
+    if(skips.length)add("低","A","見出しのレベルが飛んでいる","構造が正しく読み取られにくくなります。",skips.slice(0,5),"h2の次はh3、のように順番につなぐ。");
+    const emptyH=hs.filter(h=>!h.textContent.trim());
+    if(emptyH.length)add("中","A","中身のない見出しが"+emptyH.length+"個ある","",[],"見出しタグを外すか文言を入れる。");
+
+    // ---- answer-first
+    const flow=[...doc.body.querySelectorAll("h1,h2,h3,h4,h5,h6,p")];
+    const leadOf=h=>{const i=flow.indexOf(h);const n=flow[i+1];return n&&n.tagName==="P"&&n.textContent.trim()?n.textContent.trim():null};
+    const GREET=/^(こんにちは|こんばんは|はじめまして|初めまして|ようこそ|今回は|本日は|皆さん|みなさん)/;
+    if(h1s.length){
+      const lead=leadOf(h1s[0]);
+      if(!lead){/* h1の直後に説明文がない：WordPressの仕様で改善できないため指摘しない（2026/10/14） */}
+      else if(GREET.test(lead))add("中","A","h1直後が挨拶文になっている","結論より前置きが先に来ています。",[lead.slice(0,120)],"挨拶を後ろへ移し、冒頭に「何のページか・何ができるか」を書く。");
+      else if(lead.length>160)add("低","A","h1直後の文が長い（"+lead.length+"文字）","結論が埋もれます。",[lead.slice(0,120)+"…"],"冒頭を80〜120文字の要約にし、詳細は次の段落へ。");
+      else P.push("h1直後の文："+lead.slice(0,50)+(lead.length>50?"…":"")+"（結論になっているかは目視で確認）");
+    }
+    const greetH2=hs.filter(h=>h.tagName==="H2").filter(h=>{const l=leadOf(h);return l&&GREET.test(l)});
+    if(greetH2.length)add("低","A","h2直後が前置きで始まる節がある","各節の冒頭に答えを置くと引用されやすくなります。",greetH2.map(h=>h.textContent.trim().slice(0,40)),"節の最初の1文で結論を述べる。");
+
+    // ---- FAQ
+    const qh=hs.filter(h=>h.tagName!=="H1"&&/[？?]\s*$|^(Q[.．:：\s]|質問)/i.test(h.textContent.trim()));
+    // ---- JSON-LD
+    const nodes=[];let ldErr=[];
+    const ldScripts=[...doc.querySelectorAll('script[type="application/ld+json"]')];
+    const walk=o=>{if(Array.isArray(o))o.forEach(walk);else if(o&&typeof o==="object"){nodes.push(o);if(o["@graph"])walk(o["@graph"])}};
+    ldScripts.forEach((s,i)=>{try{walk(JSON.parse(s.textContent))}catch(e){ldErr.push("#"+(i+1)+"："+e.message.slice(0,80))}});
+    const types=n=>[].concat(n["@type"]||[]);
+    const allTypes=nodes.flatMap(types);
+    if(!ldScripts.length)add("高","A","構造化データ（JSON-LD）がない","事業者名・所在地・電話などをAIが機械的に読み取れません。",[],"Organization または LocalBusiness のJSON-LDを設置する（KIZUNA AIOの設定値から出力）。");
+    if(ldErr.length)add("高","A","JSON-LDに構文エラーがある","エラーのデータは読み取られません。",ldErr,"カンマや引用符を修正する。");
+    if(ldScripts.length&&!ldErr.length)P.push("JSON-LDあり（種類："+(allTypes.join("、")||"なし")+"）");
+    const orgRe=/(Organization|Business|Corporation|Store|Restaurant|School|Clinic|Dentist|Hospital|Salon|Shop)/;
+    const org=nodes.find(n=>types(n).some(t=>orgRe.test(t)));
+    if(ldScripts.length&&!ldErr.length&&!org)add("中","B","事業者を示す構造化データがない","このページのJSON-LDに Organization / LocalBusiness がありません（トップや会社概要にあれば問題ありません）。",[allTypes.join("、")||"(型なし)"],"会社概要ページなどに設置されているか確認する。");
+    if(org){
+      const miss=[];
+      if(!org.name)miss.push("name");if(!org.url)miss.push("url");if(!org.telephone)miss.push("telephone");
+      if(!org.address)miss.push("address");else if(typeof org.address==="object"&&!org.address.streetAddress)miss.push("address.streetAddress");
+      if(!org.logo&&!org.image)miss.push("logo / image");if(!org.sameAs)miss.push("sameAs");
+      if(types(org).some(t=>t!=="Organization"&&orgRe.test(t))){
+        if(!org.openingHoursSpecification&&!org.openingHours)miss.push("openingHours");
+        if(!org.geo)miss.push("geo");
+      }
+      if(miss.length)add("中","B","事業者の構造化データに未設定の項目がある","足りない項目：",[miss.join("、")],"KIZUNA AIO設定に値を入れる（値は依頼主に確認）。");
+      else P.push("事業者の構造化データ項目がそろっている");
+    }
+    if(qh.length>=2&&!allTypes.includes("FAQPage"))add("中","A","FAQ形式の見出しが"+qh.length+"個あるのにFAQPageがない","質問と回答の組がAIに伝わりにくくなります。",qh.slice(0,5).map(h=>h.textContent.trim().slice(0,60)),"FAQPageのJSON-LDを追加する。");
+    else if(qh.length>=2)P.push("FAQ見出し"+qh.length+"個とFAQPageが対応");
+
+    // ---- OGP
+    const ogMiss=["og:title","og:description","og:image"].filter(p=>!doc.querySelector('meta[property="'+p+'"]'));
+    if(ogMiss.length)add("低","A","OGPが不足している","SNSや一部AIの要約表示に影響します。",[ogMiss.join("、")],"不足分を設定する。");
+    else P.push("OGP（title / description / image）あり");
+
+    // ---- images / links
+    const imgs=[...doc.querySelectorAll("img")];
+    const noAlt=imgs.filter(i=>!i.hasAttribute("alt"));
+    const emptyAlt=imgs.filter(i=>i.getAttribute("alt")==="");
+    const badAlt=imgs.filter(i=>/\.(jpe?g|png|gif|webp)$/i.test(i.getAttribute("alt")||"")||/^(画像|image|img|写真)\d*$/i.test((i.getAttribute("alt")||"").trim()));
+    if(noAlt.length)add("中","A","alt属性のない画像が"+noAlt.length+"枚ある","画像の内容が読み取れません。",noAlt.slice(0,5).map(i=>i.getAttribute("src")||"(src不明)"),"内容を表す短い文をaltに入れる（装飾なら alt=\"\"）。");
+    if(emptyAlt.length&&emptyAlt.length<imgs.length)add("低","B","altが空の画像が"+emptyAlt.length+"枚ある","装飾なら問題ありません。内容のある画像なら説明が必要です。",emptyAlt.slice(0,5).map(i=>i.getAttribute("src")||"(src不明)"),"内容のある画像には説明を入れる。");
+    if(badAlt.length)add("低","A","altがファイル名や「画像」だけになっている","説明として機能しません。",badAlt.slice(0,5).map(i=>i.getAttribute("alt")),"何が写っているかを書く。");
+    if(imgs.length&&!noAlt.length&&!badAlt.length)P.push("画像"+imgs.length+"枚のalt属性あり");
+
+    const genericA=[...doc.querySelectorAll("a")].filter(a=>/^(こちら|詳細|詳しくはこちら|詳しく見る|もっと見る|クリック|ここ|more|click here)$/i.test(a.textContent.trim()));
+    if(genericA.length)add("低","A","「こちら」等だけのリンクが"+genericA.length+"個ある","リンク先の内容が文字から分かりません。",genericA.slice(0,5).map(a=>a.textContent.trim()+" → "+(a.getAttribute("href")||"")),"リンク先の内容が分かる語句にする（例：料金プランの一覧）。");
+
+    // ---- volume / date
+    if(flat.length<300)add("中","B","本文が少ない（"+flat.length+"文字）","AIが引用できる情報量が足りません。",[],"ページの目的に必要な説明を追加する（内容は依頼主に確認）。");
+    else P.push("本文量 "+flat.length+"文字");
+    const hasDate=doc.querySelector("time")||nodes.some(n=>n.dateModified||n.datePublished);
+    if(!hasDate&&doc.querySelector("article"))add("低","B","記事に日付がない","更新日はAIが情報の新しさを判断する材料になります。",[],"公開日・更新日を表示し、datePublished / dateModified も設定する。");
+
+    // ---- notation
+    const N=(lv,title,detail,re,fix,cond)=>{const c=count(text,re);if(c&&(!cond||cond()))add(lv,"A",title+"（"+c+"か所）",detail,hits(text,re),fix)};
+    const hasWave=/〜/.test(text),hasFW=/～/.test(text);
+    if(hasWave&&hasFW)add("中","A","波ダッシュ「〜」と全角チルダ「～」が混在","表記ブレです。",hits(text,/[〜～]/),"どちらかに統一する。");
+    else if(hasFW)add("低","A","全角チルダ「～」が使われている（"+count(text,/～/)+"か所）","文字化けしやすい文字です。",hits(text,/～/),"「〜」に統一する。");
+    N("中","全角数字が使われている","",/[０-９]+/,"半角数字にする。");
+    N("低","全角英字が使われている","",/[Ａ-Ｚａ-ｚ]+/,"半角英字にする（社名の表記は正式名称に合わせる）。");
+    N("中","半角カナが使われている","",/[｡-ﾟ]+/,"全角カナにする。");
+    N("中","ゼロ幅文字が混入している","見えない文字です。コピー時に混ざることがあります。",/[​-‍﻿⁠]/,"削除する。");
+    N("低","全角スペースが使われている","",/　/,"必要な箇所以外は削除または半角スペースにする。");
+    const jpParen=count(text,/[぀-ヿ一-鿿]\([^)]*\)|\([^)]*\)[぀-ヿ一-鿿]/), fwParen=count(text,/[（）]/);
+    if(jpParen&&fwParen)add("中","A","半角カッコ()と全角カッコ（）が混在（半角"+jpParen+"か所）","表記ブレです。",hits(text,/[぀-ヿ一-鿿]\([^)]*\)/),"全角（）に統一する。");
+    else if(jpParen)add("低","A","日本語文中に半角カッコ()がある（"+jpParen+"か所）","",hits(text,/[぀-ヿ一-鿿]\([^)]*\)/),"全角（）に揃えるか、サイト全体の方針に合わせる。");
+    N("中","助詞の重複（誤字の疑い）","",/(?<![ぁ-ん])(のの|をを|にに|はは|がが|でで|とと)(?![ぁ-ん])/,"意図した表現か確認して修正する。");
+    // 電話・郵便
+    const tels=[...text.matchAll(/0\d{1,3}[\-‐‑–−ー－ ]\d{2,4}[\-‐‑–−ー－ ]\d{3,4}/g)].map(m=>m[0]);
+    const badTel=tels.filter(t=>/[^\d\-]/.test(t));
+    if(badTel.length)add("中","A","電話番号の区切りが半角ハイフンでない","検索や機械的な照合で一致しなくなります。",[...new Set(badTel)].slice(0,5),"半角ハイフン「-」に統一する。");
+    else if(tels.length)P.push("電話番号の区切りは半角ハイフン（"+[...new Set(tels)].slice(0,3).join("、")+"）");
+    const zips=[...text.matchAll(/(?<![0-9０-９\-‐‑–−ー－])〒?\s?[0-9０-９]{3}[\-‐‑–−ー－]?[0-9０-９]{4}(?![0-9０-９])(?![\-‐‑–−ー－][0-9０-９])/g)].map(m=>m[0]).filter(z=>/[\-‐‑–−ー－]/.test(z)||/〒/.test(z));
+    const badZip=zips.filter(z=>/[^\d〒 \-]/.test(z));
+    if(badZip.length)add("中","A","郵便番号の表記が半角数字・半角ハイフンでない","",[...new Set(badZip)].slice(0,5),"「〒123-4567」の形に統一する。");
+
+    // ---- ④ company page
+    const t=norm(flat);
+    if(opt.isCompany){
+      const formal=/(株式会社|有限会社|合同会社|合資会社|一般社団法人|一般財団法人|公益社団法人|公益財団法人|社会福祉法人|医療法人|学校法人|特定非営利活動法人|NPO法人)/.test(t);
+      const rep=/(代表者|代表取締役|代表理事|理事長|園長|校長|院長|店主|代表)[:：]?/.test(t);
+      const biz=/(事業内容|事業|サービス|運営|提供|製造|販売|を行って|しています|しております)/.test(t);
+      (formal?P:F).push(formal?"正式名称（法人格つき）の表記あり":{lv:"高",kind:"B",title:"正式名称（法人格つき）が本文に見当たらない",detail:"会社概要の正本ページで、法人格を含む正式名称がAIに伝わりません。",ev:[],fix:"正式名称を本文に記載する（表記は依頼主に確認）。"});
+      (rep?P:F).push(rep?"代表者名の項目あり":{lv:"高",kind:"B",title:"代表者名が本文に見当たらない",detail:"",ev:[],fix:"代表者名を記載する（依頼主に確認）。"});
+      (biz?P:F).push(biz?"事業内容を示す語あり（文章として何をしているか分かるかは目視で確認）":{lv:"高",kind:"B",title:"何をしている事業者か分かる文章が見当たらない",detail:"",ev:[],fix:"「〇〇を行う（地域）の事業者です」という文を入れる。"});
+    }
+
+    // ---- ③ settings
+    const ldStr=norm(JSON.stringify(nodes));
+    const chk=(label,val,digits)=>{
+      if(!val||!val.trim())return;
+      const v=digits?val.normalize("NFKC").replace(/\D/g,""):norm(val);
+      const b=digits?text.normalize("NFKC").replace(/\D/g,""):t;
+      const l=digits?ldStr.replace(/\D/g,""):ldStr;
+      if(!v)return;
+      if(!b.includes(v))add("高","B","設定値「"+label+"」が本文に見当たらない","設定値と実際の表記が食い違っている可能性があります。",[val],"どちらが正しいか依頼主に確認し、勝手に補わない。");
+      else if(nodes.length&&!l.includes(v))add("中","B","設定値「"+label+"」が構造化データに出ていない","本文にはあります。",[val],"JSON-LDの出力設定を確認する。");
+      else P.push("設定値「"+label+"」が本文に一致");
+    };
+    chk("名称",opt.name);chk("代表者名",opt.rep);chk("電話",opt.tel,true);chk("住所",opt.addr);chk("設立年",opt.est);
+
+    // ---- 設定「既定OGP画像URL」：画像のURLか／1200×630px 程度か
+    const og=(opt.ogp||"").trim();
+    const ogw=parseFloat(String(opt.ogw||"").normalize("NFKC")), ogh=parseFloat(String(opt.ogh||"").normalize("NFKC"));
+    if(og){
+      const prob=[];
+      if(!/^https?:\/\//i.test(og))prob.push("http:// か https:// で始まっていません");
+      else if(/^http:\/\//i.test(og))prob.push("https:// ではなく http:// です");
+      if(!/\.(jpe?g|png|gif|webp)(\?|#|$)/i.test(og))prob.push("画像ファイル（.jpg / .png など）のURLに見えません");
+      if(/\.webp(\?|#|$)/i.test(og))prob.push("webp は、表示されないSNSがあります（jpg か png が安全）");
+      if(prob.length)add("中","A","既定OGP画像URLが、画像ファイルのURLになっていない","SNSに貼ったときの画像として使えない、または表示されない可能性があります。",prob.concat(["入力されたURL："+og.slice(0,100)]),"画像ファイル（.jpg / .png）の、https:// で始まるURLを入れる。");
+      else P.push("既定OGP画像URL：https:// で始まる画像ファイルのURLになっている");
+      let sw=null,sh=null,from="";
+      if(isFinite(ogw)&&isFinite(ogh)&&ogw>0&&ogh>0){sw=ogw;sh=ogh;from="入力した値"}
+      else{
+        const mw=doc.querySelector('meta[property="og:image:width"]'),mh=doc.querySelector('meta[property="og:image:height"]');
+        const aw=mw?parseFloat(mw.getAttribute("content")):NaN,ah=mh?parseFloat(mh.getAttribute("content")):NaN;
+        if(isFinite(aw)&&isFinite(ah)&&aw>0&&ah>0){sw=aw;sh=ah;from="ページの og:image:width / height"}
+        else{const fm=og.match(/(\d{3,4})x(\d{3,4})(?=\.[a-z]+(\?|#|$))/i);if(fm){sw=+fm[1];sh=+fm[2];from="ファイル名の数字（目安）"}}
+      }
+      if(sw&&sh){
+        const ratio=sw/sh,ratioOk=ratio>=1.8&&ratio<=2.0,big=sw>=1200;
+        if(!ratioOk||!big)add(ratioOk?"低":"中","A","既定OGP画像のサイズが 1200×630px 程度ではない（"+sw+"×"+sh+"）","縦横の比やサイズが合っていないと、端が切れたり、小さくぼやけたりして表示されます。",["いまのサイズ："+sw+"×"+sh+"px（"+from+"）","縦横の比："+ratio.toFixed(2)+"（目安は 1.91。1200×630px のとき）"],"1200×630px 程度（横長）の画像に差し替える。");
+        else P.push("既定OGP画像のサイズ："+sw+"×"+sh+"px（"+from+"）で、1200×630px 程度");
+      }else add("低","B","既定OGP画像のサイズを確認できていない","このツールは、画像の大きさを自動では読み取れません。",["入力されたURL："+og.slice(0,100)],"画像の幅と高さを調べて、入力欄（幅・高さ）に入れる。");
+    }else if([opt.name,opt.rep,opt.tel,opt.addr,opt.est].some(v=>(v||"").trim()))P.push("既定OGP画像URLは未入力のため、確認していません");
+
+    // ---- 現在文章と変更提案の組（機械的に直せる表記の指摘だけ。診断項目そのものは変えない）
+    const half=s=>s.replace(/[０-９Ａ-Ｚａ-ｚ]/g,c=>String.fromCharCode(c.charCodeAt(0)-0xFEE0));
+    const attach=(start,re,fix)=>{const f=F.find(x=>x.title.startsWith(start));if(f)f.pairs=mkPairs(text,re,fix)};
+    const nFW=count(text,/～/), nWave=count(text,/〜/), tilde=nFW>=nWave?"～":"〜";
+    attach("波ダッシュ「〜」と全角チルダ",/[〜～]/,()=>tilde);
+    attach("全角チルダ「～」が使われている",/～/,()=>"〜");
+    attach("全角数字",/[０-９]+/,half);
+    attach("全角英字",/[Ａ-Ｚａ-ｚ]+/,half);
+    attach("半角カナ",/[｡-ﾟ]+/,s=>s.normalize("NFKC"));
+    attach("ゼロ幅文字",/[​-‍﻿⁠]/,()=>"");
+    attach("全角スペース",/　/,()=>" ");
+    const parenRe=/[぀-ヿ一-鿿]\([^)]*\)|\([^)]*\)[぀-ヿ一-鿿]/;
+    const parenFix=s=>s.replace(/\(/g,"（").replace(/\)/g,"）");
+    attach("半角カッコ()と全角カッコ",parenRe,parenFix);
+    attach("日本語文中に半角カッコ",parenRe,parenFix);
+    attach("助詞の重複",/(?<![ぁ-ん])(のの|をを|にに|はは|がが|でで|とと)(?![ぁ-ん])/,s=>s[0]);
+    attach("電話番号の区切り",/0\d{1,3}[\-‐‑–−ー－ ]\d{2,4}[\-‐‑–−ー－ ]\d{3,4}/,s=>s.replace(/[‐‑–−ー－ ]/g,"-"));
+    attach("郵便番号",/(?<![0-9０-９\-‐‑–−ー－])〒?\s?[0-9０-９]{3}[\-‐‑–−ー－]?[0-9０-９]{4}(?![0-9０-９])(?![\-‐‑–−ー－][0-9０-９])/,s=>{if(s[0]!=="〒")return s;const d=s.normalize("NFKC").replace(/\D/g,"");return "〒"+d.slice(0,3)+"-"+d.slice(3)});
+
+    F.sort((a,b)=>LV[a.lv]-LV[b.lv]);
+    let ai=0,bi=0;F.forEach(f=>{f.id=f.kind+"-"+(f.kind==="A"?++ai:++bi)});
+    F.forEach(f=>{f.key=f.kind+":"+f.title.replace(/[0-9０-９]+/g,"#")});
+    const pen=F.reduce((s,f)=>s+({高:9,中:4,低:1})[f.lv],0);
+    return {F,P,score:Math.max(0,100-pen),chars:flat.length};
+  }
+
+  // ---- 項目ごとの説明（なぜAIに必要か・直し方の手順・例）。診断の判定そのものは変えない
+  const SP="KIZUNA AIO「設定」";
+  const ORGMAP={"name":"名称","url":"URL","telephone":"電話","address":"住所（郵便番号・都道府県・市区町村・番地）","address.streetAddress":"住所の番地","logo / image":"ロゴURL／事業者画像URL","sameAs":"sameAs（公式SNSなどのURL）","openingHours":"営業時間","geo":"緯度経度"};
+  const GUIDE=[
+    {m:"画面の表示を止めるJavaScript",why:"ページを開くと、ブラウザは上から順番に読んでいきます。<head>（ページの頭の部分）に、defer も async も付いていない script があると、ブラウザはそのファイルを全部読み終わるまでそこで止まります。その間、画面は真っ白のままです。本を読んでいる途中で「先にこの宿題を終わらせなさい」と言われて、ずっと続きが読めない状態です。",words:[["script","ページに動きをつけるプログラム（JavaScript）を読み込む命令です。"],["defer","「ページを全部読み終わってから、あとで動かしてね」という合図です。付けると、画面が先に出ます。"],["async","「読み込みは同時に進めて、できた順に動かしてね」という合図です。"],["ファーストビュー","ページを開いたとき、スクロールしなくても最初に見える画面のことです。"]],steps:[
+      "まず数える。ページのソースを表示する（Ctrl+U）。Ctrl+F で「<head」と「</head>」を探し、その間にある <script src=\"…\"> を数える。このツールの指摘に、見つかった script の一覧が出ている。",
+      "その中で、defer も async も書かれていないものに印を付ける。これが「画面を止めている犯人」の候補。",
+      "【いちばん大事】印を付けたものを、1つずつ「defer を付けてよいか」テストする。Chrome で F12 を押し、「Network（ネットワーク）」タブを開く。そのファイル（.js）を右クリックして「リクエスト URL をブロック（Block request URL）」を選び、ページを読み込み直す。",
+      "テストの結果を見る。止めても、最初の画面がちゃんと出る → defer を付けてよい。画面が崩れる、スライドが出ない、何も出ない → defer を付けてはいけない。",
+      "付けてよいものだけ、defer を付ける。サイトによって設定の場所が違う。どのプラグインのスクリプトかは、URLの /wp-content/plugins/○○/ の「○○」の部分で分かる。テーマや高速化プラグインの設定で「JavaScriptをフッターで読み込む」「defer（遅延読み込み）」にできないか確認する。",
+      "直したあとに、もう一度ページを開く。最初の画面がちゃんと出ること、スライダーが動くこと、パソコンとスマホの両方で崩れていないことを確認する。"],ex:[S+' src="/wp-content/plugins/foo/app.js">'+E,S+' src="/wp-content/plugins/foo/app.js" defer>'+E],note:"【危険】最初の画面を作っているJavaScriptに defer を付けてはいけません。スライダーやカルーセル（slick、Swiper など）は、動き始めるまでスライドを隠す作りのものが多く、defer を付けると、画面が出るのがさらに遅くなります。実際の案件で、メインの部分が出るまでの時間が17秒から33秒に悪化しました。必ず上のテスト（止めても最初の画面が出るか）をしてから付けてください。"},
+    {m:"メインビジュアルがCSSの背景画像",why:"ページの一番上にある大きな写真（メインビジュアル）が、CSS（見た目を決める指示書）の「背景画像」になっていると、ブラウザは、CSSを全部読み終わるまで、その写真があることに気づけません。気づくのが遅れたぶん、写真が出てくるのも遅くなります。説明書の中にしか「1枚目のプリントはこれ」と書いていなくて、説明書を読み終わるまで探し始められないようなものです。",words:[["CSS","ページの見た目（色・大きさ・並び方）を決める指示書です。"],["背景画像","CSSの background-image で、文字の後ろなどに敷く画像のことです。<img>タグの画像とは違い、CSSを読むまで見つかりません。"],["preload","「この画像はあとで使うから、先に取りに行っておいてね」という予約です。"],["fetchpriority=\"high\"","「この画像は急ぎです」という印です。"],["LCP","ページの一番大きな部分が出るまでの時間のことです。短いほど良いです。"]],steps:[
+      "まず、指摘に出ている画像が、本当にメインビジュアルか確認する。画像のURLを新しいタブで開き、ページを開いたとき最初に見える大きな画像と同じか見る。違うなら、この指摘は対応しなくてよい。",
+      "このツールは、貼り付けたソースの中のstyleだけを見ている。外部のCSSファイルの中にある背景画像は見えない。気になるときは、F12 → 「Network（ネットワーク）」タブでページを読み込み直し、その画像がいつ読み込まれ始めるかを見る。",
+      "直し方は2つある。どちらか1つを選ぶ。【方法A】<head>の上のほうに、preload を入れる。【方法B】背景画像をやめて、<img> タグに変える。方法Aは見た目が変わりにくいので、まず方法Aがおすすめ。",
+      "【方法A】<head>の中の、できるだけ上（CSSの<link>やscriptより前）に、次の1行を入れる。画像のURLは、実際に使っている画像と一字一句同じにする（違うと、同じ画像を2回読み込んでしまう）。自分で入れる場所が分からないときは、技術担当に「この画像を preload してほしい」と依頼する。",
+      "【方法B】背景画像の場所に、<img> タグで同じ画像を置く。alt（画像の説明）、width と height（大きさ）、fetchpriority=\"high\" を付ける。見た目が変わりやすいので、崩れていないか必ず確認する。",
+      "スライダー（画像が切り替わるもの）の場合は、1枚目だけを先に読ませる。2枚目以降は、最初に読ませない（preload しない。<img> なら loading=\"lazy\" を付ける）。全部を先に読ませると、いちばん大事な1枚目が遅くなる。",
+      "直したあとに、F12 → 「Network」タブでページを読み込み直す。その画像が、リストの上のほうで読み込まれ始めていることを確認する。そのうえで、画面が崩れていないか、スライダーが動くか、パソコンとスマホの両方で確認する。"],ex:['.hero { background-image: url(/img/main.jpg); }（CSSの背景画像）','<link rel="preload" as="image" href="/img/main.jpg" fetchpriority="high">'],note:"preload は、最初に見える画像1枚だけにしてください。何枚も入れると、かえって遅くなります。<img> に変えるときは、メインビジュアルには loading=\"lazy\" を付けないでください（付けると、読み込みが遅れます）。スマホとパソコンで別の画像を使っている場合は、技術担当に相談してください。"},
+    {m:"ファーストビューより下の画像に fetchpriority",why:"ブラウザは、画像を読み込む順番を自分で決めています。fetchpriority=\"high\" は「この画像は急ぎです」という印です。急ぎの印がたくさんあると、どれが本当に急ぎか分からなくなり、いちばん大事なメインビジュアル（最初に見える大きな画像）の読み込みが遅れます。全部の宿題に「急ぎ」と書くと、本当に急ぎの宿題が後回しになるのと同じです。",words:[["fetchpriority","画像を読み込む順番の「急ぎ度」を、ブラウザに伝える印です。high は「急ぎ」です。"],["ファーストビュー","ページを開いたとき、スクロールしなくても最初に見える範囲のことです。"],["通信","インターネットから画像などを取ってくる道のことです。同時に通せる量には限りがあります。"]],steps:[
+      "まず数える。ページのソースを表示する（Ctrl+U）。Ctrl+F で fetchpriority=\"high\" を検索して、何か所あるか数える。このツールの指摘に、ページの下のほうにありそうな画像の一覧が出ている。",
+      "指摘に出た画像が、本当に「最初に見える範囲の外」にあるか確認する。実際にページを開いて、画像のURLの画像を探す。スクロールしないと見えない場所にあれば、対象。",
+      "最初に見える範囲の外にある画像の <img> タグから、fetchpriority=\"high\" だけを消す。src や alt など、ほかの部分は消さない。",
+      "最初に見える範囲のメインビジュアル1枚には、付けたままでよい。付いていなければ、付けると良い。",
+      "直したあとに、もう一度 Ctrl+F で fetchpriority=\"high\" を検索する。メインビジュアルの1枚だけが残っていれば完成。画像がちゃんと出るかも確認する。"],ex:['<img src="/img/footer-banner.jpg" alt="バナー" fetchpriority="high">','<img src="/img/footer-banner.jpg" alt="バナー" loading="lazy">'],note:"ソースだけでは、どの画像が最初に見える範囲か決められません。このツールは、ページの上から4枚目以降の画像を「見えない範囲の可能性がある」として出しています。必ず、実際の画面で確かめてください。"},
+    {m:"ファーストビューより下の画像に loading",why:"ページを開いたとき、まだ見えない下のほうの画像まで全部すぐ読み込むと、いちばん大事な画像が遅くなり、ページ全体も重くなります。loading=\"lazy\" を付けると、「スクロールして近づいたときに読み込む」ようになります。そのぶん、先に大事な部分が早く出ます。",words:[["loading=\"lazy\"","「見える場所に近づいてから読み込んでね」という印です。lazy は「ゆっくり・あとで」という意味です。"]],steps:[
+      "指摘に出た画像（src）を、ページの中で探す。",
+      "実際の画面で、最初に見える範囲の外にあるか確認する。スクロールしないと見えない画像が対象。",
+      "対象の画像の <img> タグに、loading=\"lazy\" を足す。WordPress は、通常、画像に自動で loading=\"lazy\" を付ける。付いていないときは、カスタムHTMLで手書きされた画像や、高速化プラグインなどの設定で外されている可能性がある。手書きなら、直接 loading=\"lazy\" を書く。",
+      "最初に見える範囲のメインビジュアルには、loading=\"lazy\" を付けない（付けると、読み込みが遅れる）。",
+      "直したあとに、ページをスクロールして、画像がちゃんと出ることを確認する。ソースで loading=\"lazy\" を検索して、付いたことも確認する。"],ex:['<img src="/img/gallery-03.jpg" alt="施工事例">','<img src="/img/gallery-03.jpg" alt="施工事例" loading="lazy">'],note:"ソースだけでは、どの画像が最初に見える範囲か決められません。ページの上から4枚目以降の画像を出しています。必ず、実際の画面で確かめてください。"},
+    {m:"既定OGP画像URLが",why:"OGP画像は、LINE・X（Twitter）・Facebookなどにリンクを貼ったときに出る、大きな画像です。KIZUNA AIOの「既定OGP画像URL」は、ページごとの画像が無いときに使われる画像です。URLが画像ではないものだと、画像が出ません。",words:[["OGP","リンクを貼ったときの見た目（題名・説明・画像）を決める情報です。"],["URL","インターネット上の住所のことです。画像にも1枚ずつあります。"]],steps:[
+      "入力されているURLを、新しいタブで開く。画像だけが表示されれば正しい。ページや「見つかりません」の画面が出たら、URLが違う。",
+      "URLが https:// で始まっているか確認する。/wp-content/… のように途中から始まるものや、http:// のものは直す。",
+      "終わりが .jpg か .png の画像ファイルのURLにする。webp は、表示されないSNSがあるので、jpg か png が安全。",
+      "WordPressの「メディア」で画像を開き、「ファイルのURL」をコピーして、KIZUNA AIO「設定」の「既定OGP画像URL」に入れる（画像・SNS の欄）。",
+      "保存したあと、ページのソースで og:image が新しいURLになっているか確認する。"],note:"SNSは、前の画像を覚えている（キャッシュ）ので、直してもすぐには変わらないことがあります。Facebookの「シェアデバッガー」で、取り直すことができます。"},
+    {m:"既定OGP画像のサイズが",why:"SNSに貼ったとき、画像は横長の四角（約 1.91対1）に合わせて表示されます。サイズや縦横の比が違うと、端が切れたり、小さくぼやけたりします。いちばん安全なのは 1200×630ピクセルです。",words:[["ピクセル（px）","画像の大きさの単位です。1200×630px は、横1200・縦630の点でできた画像です。"],["縦横の比","横の長さを縦の長さで割った数です。1200×630px は約 1.91 です。"]],steps:[
+      "いまの画像の大きさを確認する。WordPressの「メディア」で画像を開くと「寸法」に出る。または、画像のURLを新しいタブで開くと、タブの名前に（幅×高さ）が出る。",
+      "1200×630px 程度の横長の画像を用意する。デザイン担当に依頼してよい。大事な文字や顔は、真ん中に置く（端は切れることがある）。",
+      "新しい画像を「メディア」にアップロードし、「ファイルのURL」をコピーする。",
+      "KIZUNA AIO「設定」の「既定OGP画像URL」に、新しいURLを入れて保存する（画像・SNS の欄）。",
+      "このツールの入力欄（幅・高さ）に、新しい画像の大きさを入れて、もう一度診断する。"],ex:["800×800px（正方形。上下が切れる）","1200×630px（横長。SNSにそのまま収まる）"],note:"ファイルが大きすぎると、表示されないことがあります。目安として、1MB以下にしてください。保存後、SNSがすぐには変わらないのは、前の画像を覚えているためです。"},
+    {m:"既定OGP画像のサイズを",why:"OGP画像の大きさが分からないと、SNSで正しく表示されるか判断できません。このツールは、画像の中身を読めないので、幅と高さを入れてもらう必要があります。",steps:[
+      "WordPressの「メディア」で、その画像を開く。「寸法」に、幅×高さが出る。",
+      "または、画像のURLを新しいタブで開く。タブの名前に（幅×高さ）が出る。",
+      "ツールの「KIZUNA AIO設定値と突き合わせる」の「既定OGP画像の幅」「高さ」に入れて、もう一度診断する。"]},
+    {m:"titleタグがない",why:"titleは、検索結果やAIが答えの出典を示すときに表示される「ページの名前」です。無いと、何のページか伝わりません。",steps:["ソースで <title> を検索し、空か無いことを確認する。","使用中のSEOプラグイン、または KIZUNA AIO の「メタ情報」で、このページのタイトルを入力する（出力元はサイトによって違うため、ソースの <title> が変わったかで確認する）。","「ページ名｜サイト名」の形で、32文字前後にする。"],ex:["（titleなし）","会社概要｜株式会社〇〇"]},
+    {m:"titleが長い",why:"長いtitleは途中で切れて表示されます。切れた部分は、検索結果や引用元の表示では読まれません。",steps:["重要な語（ページの主題・地域・サービス名）を前半に置く。","サイト名は最後に短く入れる。","60文字以内にする。"],ex:["会社概要｜地域の皆さまに愛される〇〇を目指して歩み続ける株式会社〇〇のご紹介ページ","会社概要｜株式会社〇〇"]},
+    {m:"meta descriptionがない",why:"meta descriptionは、AIや検索エンジンがページの要約として使うことがある文章です。無いと、本文から機械的に抜き出されます。",steps:["使用中のSEOプラグイン、または KIZUNA AIO の「メタ情報」で、このページの説明文を入力する。","このページが答える内容を、結論から1〜2文で書く（80〜120文字）。","本文に書かれている事実だけを使い、新しい事実は足さない。"],ex:["（なし）","静岡県島田市のスポーツショップナインは、グラブの販売・湯もみ型付け・修理を行う野球用品店です。"]},
+    {m:"meta descriptionの長さ",why:"短すぎると情報が足りず、長すぎると途中で切れます。",steps:["現在の説明文の文字数を確認する（指摘に表示）。","80〜120文字に、結論から書き直す。"]},
+    {m:"noindexが指定",why:"noindexが付くと、検索にもAIの参照にも出にくくなります。公開前の設定が残っていることがあります。",steps:["意図して付けたものか、依頼主に確認する（【B】）。","意図していなければ、WordPress「設定」→「表示設定」の「検索エンジンでの表示」（サイト全体）か、SEOプラグインのページ別設定で解除する。","解除後、ソースに noindex が無いことを確認する。"]},
+    {m:"canonicalがない",why:"同じ内容のURLが複数あるとき、どれが正本かをAIや検索エンジンに伝える印です。",steps:["ソースで rel=\"canonical\" を検索し、無いことを確認する。","SEOプラグインのcanonical設定を確認し、ページ自身のURLが出力されるようにする。"]},
+    {m:"html の lang",why:"言語の手がかりです。日本語のページなのに ja でないと、言語の判定が弱くなることがあります。",steps:["WordPress「設定」→「一般」→「サイトの言語」を日本語にする。","ソースの <html lang=\"ja\"> になっていることを確認する。"]},
+    {m:"h1がない",why:"h1はページの主題を示す見出しです。AIはページの構造を見出しで読み取ります。",steps:["ページの主題（例：会社概要）を表す見出しを1つ決める。","編集画面で、その見出しブロックの見出しレベルを「H1」にする（テーマがタイトルをh1にしている場合は、そちらを使う）。","ソースで <h1> が1つだけあることを確認する。"]},
+    {m:"h1が",why:"h1が複数あると、ページの主題が複数あるように見えます。",steps:["ページの主題を表す見出し1つだけを h1 にする。","ほかの見出しは、ブロックの見出しレベルを「H2」以下に下げる。","番号（01・02など）がh1になっている場合は、見出しにせず、段落または小さい見出しにする。テーマ側の作りなら、触ってよいか確認する。","ソースで <h1> が1つだけになったことを確認する。"],note:"ロゴ画像だけがh1のページ（トップなど）は、サイトの作りに合わせて判断してください。"},
+    {m:"見出しのレベルが飛んでいる",why:"見出しの階層が飛ぶと、構造が正しく読み取られないことがあります。",steps:["指摘された「h2 → h4」のような箇所を見つける。","間の階層を足すか、見出しレベルを1つずつつなぐ（h2の次はh3）。"]},
+    {m:"中身のない見出し",why:"空の見出しは、意味のない構造としてAIに読まれます。",steps:["空の見出しブロックを探す。","文言を入れるか、ブロックを削除する。"]},
+    {m:"h1の直後に説明文がない",why:"AIはページの冒頭の文を、答えとして拾いやすい傾向があります。",steps:["このページが答える問いを1つ決める（例：この店はどんな店か）。","h1の直後に、結論を1〜2文（100〜200字）で書く。","本文にある事実だけを使う。足したい情報は、依頼主に確認する（【B】）。"],ex:["（h1のすぐ後が画像やメニュー）","〇〇は、静岡県島田市にある野球用品店です。グラブの販売・湯もみ型付け・修理に対応しています。"]},
+    {m:"h1直後が挨拶文",why:"冒頭が挨拶だと、答えが後ろに押されます。",steps:["挨拶の文を、ページの後半へ移す。","冒頭に「何のページか・何ができるか」の結論の文を置く。"],ex:["こんにちは、〇〇のホームページへようこそ。","〇〇は、△△市で□□を行う事業者です。"]},
+    {m:"h1直後の文が長い",why:"冒頭が長いと、結論が埋もれます。",steps:["冒頭の1〜2文で結論を言い切る（80〜120文字）。","詳しい説明は、次の段落に回す。"]},
+    {m:"h2直後が前置き",why:"各節の最初の1文が答えだと、その節だけでも引用されやすくなります。",steps:["指摘された節の最初の1文を、結論の文にする。","挨拶や前置きは、2文目以降に回す。"]},
+    {m:"構造化データ（JSON-LD）がない",why:"構造化データは、事業者名・住所・電話などをAIが機械的に読める形で渡す仕組みです。",steps:[SP+"の事業者・店舗の欄（名称・住所・電話・営業時間など）に入力すると、構造化データ（JSON-LD）として出力される。","入力する値は依頼主に確認する。推測で入れない。","保存後、ソースで application/ld+json を検索して出力を確認する。"]},
+    {m:"JSON-LDに構文エラー",why:"構文エラーのあるJSON-LDは、中身が読み取られません。",steps:["ソースで application/ld+json の中身を開き、エラー表示の位置（#1など）を確認する。","カンマ抜け、引用符の閉じ忘れ、波カッコの数を直す。","直した後、構造化データのテストツール（Google のリッチリザルトテストなど）で読めることを確認する。"]},
+    {m:"事業者を示す構造化データがない",why:"AIが「この会社は何者か」を取りに行くとき、構造化データの事業者情報が手がかりになります。",steps:["会社概要・店舗情報のページに、事業者の構造化データ（Organization または LocalBusiness）があるか確認する。","他のページにあれば、このページは対応不要。無ければ"+SP+"の入力を確認する。"]},
+    {m:"事業者の構造化データに未設定",why:"名称・電話・住所などが空だと、AIが事実を取れず、本文だけで判断します。",steps:f=>["足りない項目を、"+SP+"の次の欄に入力する（値は依頼主に確認）。"].concat((f.ev[0]||"").split("、").filter(Boolean).map(k=>"「"+k+"」→ "+(ORGMAP[k]||k))),note:"設定側と本文のどちらが正しいかは、勝手に判断しないでください。"},
+    {m:"FAQ形式の見出し",why:"質問と回答の組が構造化データで示されていると、AIが質問と答えを対で取り出しやすくなります。",steps:["質問の文が見出し（H2〜H6）になっているか確認する。なっていなければ見出しにするか、開閉部分（アコーディオン）の見出し部分にする。","FAQ用の構造化データ（FAQPage）を出力する。使用中のプラグインに機能があるか確認し、無ければ技術担当に依頼する。","本文のFAQを直したら、構造化データの同じ文も直す。"],note:"FAQPageの文は、本文と必ず同じ内容にしてください。"},
+    {m:"OGPが不足",why:"OGPは、SNSなどに貼られたときの題名・説明・画像です。要約表示の手がかりにもなります。",steps:["不足している項目（指摘に表示）を確認する。","使用中のSEOプラグイン、または"+SP+"の「既定OGP画像URL」で設定する。","画像は、ページを代表するものを選ぶ。"]},
+    {m:"alt属性のない画像",why:"altは、画像の内容を文字で伝える欄です。AIは画像の中身を読めないことがあり、altが手がかりになります。",steps:["指摘された画像（src）を、メディアライブラリや編集画面で探す。","画像ブロックを選び、右側の設定の「代替テキスト（alt テキスト）」に、写っているものを入力する。","装飾だけの画像は、altを空欄にする。","KIZUNA AIO の「Alt監査」で、ほかの画像も一覧で確認できる。"],ex:["（altなし）","店内のカウンター席"]},
+    {m:"altが空",why:"装飾の画像なら問題ありません。内容のある画像は、説明がないとAIに伝わりません。",steps:["指摘された画像が、内容のある画像か装飾かを判断する。","内容のある画像には、写っているものをaltに入力する。"]},
+    {m:"altがファイル名",why:"ファイル名や「画像」は、説明になっていません。",steps:["指摘されたaltを、写っているものの説明に直す。"],ex:["IMG_0123.jpg","店舗の外観（入口側）"]},
+    {m:"「こちら」",why:"リンクの文字だけを読んでも、行き先が分からないためです。",steps:["指摘されたリンクを探す。","「こちら」を、行き先が分かる語に変える。"],ex:["詳しくはこちら","料金プランの一覧を見る"]},
+    {m:"本文が少ない",why:"AIが引用できる情報量が足りません。",steps:["このページが答える問いに必要な情報を確認する。","足りない情報を、依頼主に確認して追加する（【B】）。事実を推測で書かない。"]},
+    {m:"記事に日付",why:"日付は、情報の新しさをAIが判断する材料です。",steps:["記事の公開日・更新日を表示する。","可能なら構造化データ（datePublished / dateModified）にも出力する。"]},
+    {m:"波ダッシュ「〜」と全角チルダ",why:"見た目は同じでも別の文字です。混在すると、機械が読むときに同じ表記として一致しません。",steps:["サイト内で多い方（または指定の方）に統一する。","画面の見た目では区別できないため、管理画面の実データを見て、下の「変更提案」の記号をコピーして貼り付ける。","全ページと、メタディスクリプションにも同じ記号が使われていないか確認する。"],note:"〜は U+301C、～は U+FF5E です。"},
+    {m:"全角チルダ「～」",why:"文字化けしやすい記号で、波ダッシュと混在すると表記ブレになります。",steps:["サイト内の他のページの記号を確認し、多数派に合わせる。","「変更提案」の記号をコピーして貼り付ける。"]},
+    {m:"全角数字",why:"全角と半角が混在すると、同じ数字として一致しません。",steps:["「変更提案」の半角の数字に直す。","同じ数字が、メタ・構造化データ・画像のaltに無いか確認する。"]},
+    {m:"全角英字",why:"全角と半角が混在すると、同じ語として一致しません。",steps:["「変更提案」の半角に直す。","社名・商品名は、正式名称の表記に合わせる。"]},
+    {m:"半角カナ",why:"半角カナは、文字として読み取られにくい場合があります。",steps:["「変更提案」の全角カナに直す。"]},
+    {m:"ゼロ幅文字",why:"目に見えない文字で、見出しなどの先頭に入ると、文字列が一致しなくなります。",steps:["管理画面で、該当の文字を含むブロックを探す。","ビジュアル編集で打ち直しても消えないことがある。その場合は、ブロックの「︙」→「HTMLとして編集」で、該当の行ごと文字を入れ直す。","直した後、公開ページのソースで見えない文字が残っていないか確認する。"],note:"目では判定できません。指摘に出た文字コード（U+200Bなど）で確認してください。"},
+    {m:"全角スペース",why:"氏名や名称のスペースの種類が混在すると、同じ名前として一致しません。",steps:["サイト内の多数派（氏名は半角スペースが多い）に合わせる。","「変更提案」の形に直す。"]},
+    {m:"半角カッコ()と全角カッコ",why:"カッコの種類が混在すると、表記ブレになります。",steps:["全角（）に統一する。","「変更提案」の形に直す。"]},
+    {m:"日本語文中に半角カッコ",why:"サイト内の多数派と違う記号は、表記ブレになります。",steps:["サイト内の他のカッコを確認し、全角（）に揃える。"]},
+    {m:"助詞の重複",why:"日本語が崩れた文は、AIが引用しにくくなります。",steps:["指摘された箇所の前後を読み、意図した表現か確認する。","誤りなら「変更提案」の形に直す。"],note:"話し言葉や、人柄が出る言い回しは、直さず提案にとどめてください。"},
+    {m:"電話番号の区切り",why:"区切りの記号が違うと、同じ番号として一致しません。",steps:["「変更提案」の半角ハイフンの形に直す。","フッター・アクセス・採用・記事内の電話番号も全部同じ形にする。","構造化データの電話番号も確認する。"]},
+    {m:"郵便番号の表記",why:"表記が揺れると、同じ住所として一致しません。",steps:["「〒123-4567」の形に直す。","構造化データの郵便番号には「〒」を入れない（「123-4567」）。"]},
+    {m:"正式名称（法人格",why:"AIが「この会社は何者か」を取りに行く一次情報のページです。法人格まで含めた正式名称が本文に文字で必要です。",steps:["依頼主に、正式名称（法人格まで）を確認する（個人事業なら、法人格なしで確定する）。","会社概要の本文に、文字で記載する（画像の中の文字やフッターだけでは不十分）。","確定した表記を、"+SP+"の「名称」にも同じ形で入れる。"],note:"勝手に補わず、必ず【B】で確認してください。"},
+    {m:"代表者名が本文",why:"事業者の一次情報として、代表者名が本文に必要です。",steps:["依頼主に、代表者名を載せてよいか確認する。","載せる場合は、会社概要の本文に文字で記載する。"],note:"新しい代表者に変わっている場合は、現在の代表者を確認してください。"},
+    {m:"何をしている事業者",why:"AIが事業者像を組み立てるために、何をしている事業者かが分かる文が本文に必要です。",steps:["既存のページにある事実だけで、1〜2文（約100字）の案を作る。","依頼主に、掲載してよいか確認する（【B】）。新しい事実は足さない。","会社概要ページの冒頭に置く。"],ex:["（事業内容を説明する文がない）","〇〇は、△△市で□□を行う事業者です。代表は□□です。"]},
+    {m:"設定値「",why:"プラグイン設定の情報は、AIの回答材料にもなります。設定と本文がずれていると、AIが矛盾した情報を読みます。",steps:["設定値と、本文の該当箇所を並べて確認する。","どちらが正しいかは勝手に判断せず、依頼主に確認する（【B】）。","正しい方に合わせて、設定または本文を直す。"],note:"設立年・営業時間の形式・法人格の有無は、食い違いやすい項目です。"}
+  ];
+  const CHECKAFTER="直した後は、公開ページを開き直し、ソースで旧表記が残っていないか（本文・メタ・構造化データ・alt）を検索して確認します。";
+  function guideHtml(f){
+    const g=GUIDE.find(x=>f.title.startsWith(x.m));if(!g)return "";
+    const steps=typeof g.steps==="function"?g.steps(f):g.steps;
+    return '<details class="howto"'+(f.lv==="低"?"":" open")+'><summary>なぜ必要か・直し方の手順</summary><div class="hb">'+
+      '<p class="why"><b>AIにとって</b>　'+esc(g.why)+'</p>'+
+      (g.words?'<dl class="words">'+g.words.map(w=>'<dt>'+esc(w[0])+'</dt><dd>'+esc(w[1])+'</dd>').join("")+'</dl>':'')+
+      '<ol class="steps">'+steps.map(s=>'<li>'+esc(s)+'</li>').join("")+'</ol>'+
+      (g.ex?'<div class="exs"><div><span class="k">例（悪い）</span>'+esc(g.ex[0])+'</div><div><span class="k">例（良い）</span>'+esc(g.ex[1])+'</div></div>':'')+
+      (g.note?(g.note.startsWith("【危険】")?'<p class="warn danger">'+esc(g.note)+'</p>':'<p class="warn"><b>注意</b>　'+esc(g.note)+'</p>'):'')+
+      '</div></details>';
+  }
+  function mkPairs(text,re,fix,n){
+    const out=[];const g=new RegExp(re.source,re.flags.includes("g")?re.flags:re.flags+"g");let m;
+    while((m=g.exec(text))&&out.length<(n||5)){
+      if(m[0].length===0){g.lastIndex++;continue}
+      const a=fix(m[0]);if(a===m[0])continue;
+      const ctx=s=>s.replace(/\s+/g," ");
+      out.push({L:ctx(text.slice(Math.max(0,m.index-14),m.index)),m:m[0],a:a,R:ctx(text.slice(m.index+m[0].length,m.index+m[0].length+14))});
+    }
+    return out;
+  }
+  const INV={"​":"U+200B","‌":"U+200C","‍":"U+200D","﻿":"U+FEFF","⁠":"U+2060","　":"全角スペース"};
+  const vis=s=>String(s).replace(/[​-‍﻿⁠　]/g,c=>"⟦"+INV[c]+"⟧");
+  const visH=s=>esc(s).replace(/[​-‍﻿⁠　]/g,c=>'<span class="inv">'+INV[c]+'</span>');
+  function pairHtml(f){
+    if(!f.pairs||!f.pairs.length)return "";
+    return '<div class="pairs">'+f.pairs.map(p=>
+      '<div class="pair"><div class="pl"><span class="k">現在文章</span><span class="t">'+esc(p.L)+'<mark class="del">'+visH(p.m)+'</mark>'+esc(p.R)+'</span></div>'+
+      '<div class="pl"><span class="k">変更提案</span><span class="t">'+esc(p.L)+'<mark class="add">'+(p.a===""?'<span class="inv">削除</span>':visH(p.a))+'</mark>'+esc(p.R)+'</span></div></div>').join("")+'</div>';
+  }
+  let last=null;
+  function render(r){
+    last=r;
+    const c={高:0,中:0,低:0};r.F.forEach(f=>c[f.lv]++);
+    let h='<h2>2. 診断結果</h2><div class="sum"><div class="score">'+r.score+'<small> / 100</small></div><div class="bar" aria-hidden="true"><i style="width:'+r.score+'%"></i></div><div class="cnt">'+
+      ["高","中","低"].map(k=>'<span class="pill '+LVC[k]+'">'+k+' '+c[k]+'</span>').join("")+'</div></div>';
+    h+=progHtml(r);
+    h+='<p class="note">【A】そのまま直せるもの ／【B】依頼主への確認が要るもの。点数は目安です（高−9・中−4・低−1）。</p>';
+    if(!r.F.length)h+='<p>指摘はありません。</p>';
+    else h+='<div class="row"><button id="openAll">手順をすべて開く</button><button id="closeAll">手順をすべて閉じる</button></div>';
+    if(r.F.length)h+='<div class="list">'+r.F.map((f,fi)=>'<article class="item '+LVC[f.lv]+(isDone(f)?' done':'')+'" data-i="'+fi+'"><h3><span class="tag">'+f.id+'</span>'+esc(f.title)+'<span class="pill '+LVC[f.lv]+'">'+f.lv+'</span></h3>'+doneHtml(f,fi)+
+      (f.detail?'<p>'+esc(f.detail)+'</p>':'')+
+      pairHtml(f)+
+      (f.ev.length&&!(f.pairs&&f.pairs.length)?'<div class="ev">'+f.ev.map(e=>'<span>'+esc(e)+'</span>').join("")+'</div>':'')+
+      (f.fix?'<p class="fix"><b>直し方</b>　'+esc(f.fix)+'</p>':'')+guideHtml(f)+'</article>').join("")+'</div>';
+    h+='<div class="row"><button class="primary" id="copy">修正一覧をコピー</button></div><div id="msg" role="status"></div>';
+    h+='<p class="note"><b>直したあとの確認</b>　'+esc(CHECKAFTER)+'</p>';
+    h+='<details><summary>問題なしの項目（'+r.P.length+'）</summary><ul class="pass">'+r.P.map(p=>'<li>'+esc(p)+'</li>').join("")+'</ul></details>';
+    h+='<details><summary>このツールでは判定できないこと</summary><ul class="pass"><li>誤字脱字の内容確認（助詞の重複などの機械的な検出のみ）</li><li>サイト全体の表記ブレ（このツールは1ページ分だけを見ます。全ページ分を診断して見比べてください）</li><li>WordPress側のKIZUNA AIO設定値の自動取得（上の任意欄に手で写します）</li><li>llms.txt、サイトマップ、robots.txt（別ファイルのため）</li><li>外部のCSSファイルの中にある背景画像（メインビジュアルの判定は、貼り付けたソースの中のstyleだけを見ます）</li></ul></details>';
+    $("result").innerHTML=h;
+    updateProg(r);
+    $("copy").onclick=copyList;
+    if($("openAll")){
+      $("openAll").onclick=()=>document.querySelectorAll("details.howto").forEach(d=>d.open=true);
+      $("closeAll").onclick=()=>document.querySelectorAll("details.howto").forEach(d=>d.open=false);
+    }
+  }
+  function listText(){
+    const r=last;let o="AIO診断結果（スコア "+r.score+"/100）\n"+(pgUrl()?"対象："+pgUrl()+"\n":"");
+    ["A","B"].forEach(k=>{
+      const xs=r.F.filter(f=>f.kind===k);if(!xs.length)return;
+      o+="\n■ "+(k==="A"?"【A】そのまま修正":"【B】相談（依頼主確認が必要）")+"\n";
+      xs.forEach(f=>{o+="\n【"+f.id+"】["+f.lv+"] "+f.title+(isDone(f)?"　→修正済":"")+"\n"+(f.detail?"  内容："+f.detail+"\n":"")+(f.pairs&&f.pairs.length?f.pairs.map(p=>"  【現在文章】 "+vis(p.L+p.m+p.R)+"\n  【変更提案】 "+(p.a===""?vis(p.L+p.R)+"（削除）":vis(p.L+p.a+p.R))+"\n").join(""):(f.ev.length?"  該当："+f.ev.join(" / ")+"\n":""))+(f.fix?"  直し方："+f.fix+"\n":"")});
+    });
+    return o;
+  }
+  async function copyList(){
+    const txt=listText();
+    try{await navigator.clipboard.writeText(txt);$("msg").textContent="修正一覧をコピーしました"}
+    catch(e){
+      const ta=document.createElement("textarea");ta.value=txt;ta.style.minHeight="200px";$("msg").after(ta);ta.focus();ta.select();
+      $("msg").textContent="自動コピーできませんでした。下のテキストを Ctrl+C でコピーしてください";
+    }
+  }
+  function go(user){
+    const src=$("src").value;
+    if(!src.trim()){$("result").innerHTML='<h2>2. 診断結果</h2><p>ソースを貼り付けて「診断する」を押してください。</p>';return}
+    const o=curOpt();
+    if(user===true)saveBefore(src,o);
+    render(analyze(src,o));
+  }
+  $("f_copy").onclick=async()=>{
+    const b=$("f_body").value.trim();
+    if(!b){$("f_msg").textContent="意見の内容を入力してください";return}
+    const txt="【AIO診断ツールへの意見】"+$("ver").textContent+"\nお名前："+($("f_name").value.trim()||"(未記入)")+"\n種類："+$("f_kind").value+"\n場所："+$("f_where").value+"\n意見：\n"+b;
+    try{await navigator.clipboard.writeText(txt);$("f_msg").textContent="コピーしました。このツールの管理者に送ってください"}
+    catch(e){const ta=document.createElement("textarea");ta.value=txt;ta.style.minHeight="130px";$("f_msg").after(ta);ta.focus();ta.select();$("f_msg").textContent="自動コピーできませんでした。下のテキストを Ctrl+C でコピーしてください"}
+  };
+  $("run").onclick=()=>go(true);
+  $("sample").onclick=()=>{$("src").value=SAMPLE;$("isCompany").checked=true;$("s_name").value="株式会社サンプル工房";$("s_tel").value="03-1234-5678";$("s_rep").value="";$("s_ogp").value="https://example.com/wp-content/uploads/ogp.png";$("s_ogw").value="800";$("s_ogh").value="800";$("sampleNote").hidden=false;go()};
+  $("clear").onclick=()=>{$("src").value="";["s_name","s_rep","s_tel","s_addr","s_est","s_ogp","s_ogw","s_ogh"].forEach(i=>$(i).value="");$("isCompany").checked=false;$("sampleNote").hidden=true;go()};
+  $("src").addEventListener("input",()=>{$("sampleNote").hidden=true});
+  // ================= 修正の完了チェックと、修正後ソースの確認 =================
+  let AS={};try{AS=JSON.parse(localStorage.getItem("aio_state_v1")||"{}")||{}}catch(e){AS={}}
+  const pgUrl=()=>$("pg_url").value.trim();
+  const stKey=()=>pgUrl()||"(URL未入力)";
+  const stOf=()=>AS[stKey()]||(AS[stKey()]={checks:{},verified:{}});
+  function saveAS(){
+    try{const ks=Object.keys(AS);if(ks.length>20){ks.sort((a,b)=>((AS[a].before||{}).t||0)-((AS[b].before||{}).t||0));ks.slice(0,ks.length-20).forEach(k=>delete AS[k])}localStorage.setItem("aio_state_v1",JSON.stringify(AS))}catch(e){}
+  }
+  const isDone=f=>!!stOf().checks[f.key];
+  function curOpt(){return {isCompany:$("isCompany").checked,name:$("s_name").value,rep:$("s_rep").value,tel:$("s_tel").value,addr:$("s_addr").value,est:$("s_est").value,ogp:$("s_ogp").value,ogw:$("s_ogw").value,ogh:$("s_ogh").value}}
+  function showLoadBtn(){const s=AS[stKey()];$("loadBefore").hidden=!(s&&s.before)}
+  function saveBefore(src,o){
+    const s=stOf();
+    if(!pgUrl()&&s.before&&s.before.src!==src){s.checks={};s.verified={}}
+    s.before={src:src,opt:o,t:Date.now()};saveAS();showLoadBtn();
+  }
+  function doneHtml(f,i){
+    const s=stOf();
+    return '<div class="donerow"><label class="done"><input type="checkbox" data-i="'+i+'"'+(s.checks[f.key]?" checked":"")+'> 修正が完了した</label>'+(s.verified[f.key]?'<span class="tag okv">修正後のソースで確認済み</span>':'')+'</div>';
+  }
+  function progHtml(){return '<div class="prog"><span id="progtxt"></span><div class="bar" aria-hidden="true"><i id="progbar"></i></div></div>'}
+  function updateProg(r){
+    if(!$("progtxt"))return;
+    const n=r.F.length,d=r.F.filter(isDone).length;
+    const left={高:0,中:0,低:0};r.F.filter(f=>!isDone(f)).forEach(f=>left[f.lv]++);
+    $("progtxt").textContent="修正の完了 "+d+" / "+n+" 件"+(d<n?"（まだの項目：高 "+left["高"]+"・中 "+left["中"]+"・低 "+left["低"]+"）":"　すべて完了しました");
+    $("progbar").style.width=(n?Math.round(d/n*100):100)+"%";
+  }
+  $("result").addEventListener("change",e=>{
+    const cb=e.target.closest("input[data-i]");if(!cb||!last)return;
+    const f=last.F[+cb.dataset.i];if(!f)return;
+    const s=stOf();
+    if(cb.checked)s.checks[f.key]=true;else{delete s.checks[f.key];delete s.verified[f.key]}
+    saveAS();
+    cb.closest("article").classList.toggle("done",cb.checked);
+    const v=cb.closest(".donerow").querySelector(".okv");if(v&&!cb.checked)v.remove();
+    updateProg(last);
+  });
+  $("pg_url").addEventListener("input",()=>{showLoadBtn();if(last)render(last)});
+  $("loadBefore").onclick=()=>{
+    const s=AS[stKey()];if(!s||!s.before)return;
+    const o=s.before.opt||{};
+    $("src").value=s.before.src;$("isCompany").checked=!!o.isCompany;
+    [["s_name","name"],["s_rep","rep"],["s_tel","tel"],["s_addr","addr"],["s_est","est"],["s_ogp","ogp"],["s_ogw","ogw"],["s_ogh","ogh"]].forEach(p=>{$(p[0]).value=o[p[1]]||""});
+    $("sampleNote").hidden=true;go();
+  };
+  const cardHtml=f=>'<article class="item '+LVC[f.lv]+'"><h3><span class="tag">'+f.id+'</span>'+esc(f.title)+'<span class="pill '+LVC[f.lv]+'">'+f.lv+'</span></h3>'+
+    (f.detail?'<p>'+esc(f.detail)+'</p>':'')+pairHtml(f)+
+    (f.ev.length&&!(f.pairs&&f.pairs.length)?'<div class="ev">'+f.ev.map(e=>'<span>'+esc(e)+'</span>').join("")+'</div>':'')+
+    (f.fix?'<p class="fix"><b>直し方</b>　'+esc(f.fix)+'</p>':'')+guideHtml(f)+'</article>';
+  $("run2").onclick=()=>{
+    const out=$("after_res"),s=AS[stKey()];
+    if(!s||!s.before){out.innerHTML='<p class="note">先に、上の「1. ソースを入れる」に修正前のソースを貼り付けて、「診断する」を押してください。（「例に戻す」の診断は、比べる元になりません）</p>';return}
+    const src2=$("src2").value;
+    if(!src2.trim()){out.innerHTML='<p class="note">修正後のソースを貼り付けてください。</p>';return}
+    const b=analyze(s.before.src,s.before.opt||{}),a=analyze(src2,curOpt());
+    const bk=new Map(b.F.map(f=>[f.key,f])),ak=new Map(a.F.map(f=>[f.key,f]));
+    const fixed=b.F.filter(f=>!ak.has(f.key)),remain=a.F.filter(f=>bk.has(f.key)),added=a.F.filter(f=>!bk.has(f.key));
+    const st=stOf();
+    fixed.forEach(f=>{st.checks[f.key]=true;st.verified[f.key]=true});saveAS();
+    let h='<div class="sum"><div class="cnt"><span class="pill ok">直った '+fixed.length+'</span><span class="pill hi">まだ残っている '+remain.length+'</span><span class="pill mid">新しく出た '+added.length+'</span></div><span class="note">点数：'+b.score+' → <b>'+a.score+'</b>（修正前 → 修正後）</span></div>';
+    if(!remain.length&&!added.length)h+='<p class="spok">修正前に指摘された '+fixed.length+' 件は、すべて直っていました。</p>';
+    if(fixed.length)h+='<h3 class="subh">直った項目（修正前の診断にあって、修正後には無い）</h3><ul class="fixedlist">'+fixed.map(f=>'<li><span class="pill '+LVC[f.lv]+'">'+f.lv+'</span> '+esc(f.title)+'</li>').join("")+'</ul>';
+    if(remain.length)h+='<h3 class="subh">まだ残っている項目</h3><div class="list">'+remain.map(f=>{
+      const was=bk.get(f.key),parts=[];
+      if(was&&was.title!==f.title)parts.push('修正前は「'+was.title+'」でした。数は変わりましたが、まだ残っています。');
+      if(st.checks[f.key]&&!st.verified[f.key])parts.push('「修正が完了した」にチェックが入っていますが、修正後のソースにはまだ残っています。');
+      return (parts.length?'<p class="spwarn">'+parts.map(esc).join("<br>")+'</p>':'')+cardHtml(f);
+    }).join("")+'</div>';
+    if(added.length)h+='<h3 class="subh">新しく出た項目（修正前には無かった）</h3><p class="note">修正のときに、新しく問題が出ていないかの確認です。設定値の入力欄を変えた場合も、ここに出ることがあります。</p><div class="list">'+added.map(cardHtml).join("")+'</div>';
+    out.innerHTML=h;
+    if(last)render(last);
+  };
+  showLoadBtn();
+
+  // ================= 表示速度の記録と比較（診断項目とは別の機能） =================
+  const SPKEY="aio_speed_v1";
+  const SM=[
+    {k:"score",n:"点数",hi:true,good:90,poor:50},
+    {k:"fcp",n:"FCP",good:1800,poor:3000},
+    {k:"lcp",n:"LCP",good:2500,poor:4000},
+    {k:"tbt",n:"TBT",good:200,poor:600},
+    {k:"cls",n:"CLS",good:0.1,poor:0.25},
+    {k:"si",n:"Speed Index",good:3400,poor:5800}
+  ];
+  let spRuns=[];
+  try{const s=JSON.parse(localStorage.getItem(SPKEY)||"null");if(s&&Array.isArray(s.runs))spRuns=s.runs;if(s&&s.url)$("sp_url").value=s.url}catch(e){}
+  function spSave(){try{localStorage.setItem(SPKEY,JSON.stringify({url:$("sp_url").value,runs:spRuns}))}catch(e){}}
+  const spFmt=(k,v)=>{if(v==null||isNaN(v))return "—";if(k==="score")return String(Math.round(v));if(k==="cls")return (Math.round(v*1000)/1000).toString();if(k==="tbt")return Math.round(v)+"ミリ秒";return (v/1000).toFixed(2)+"秒"};
+  const spRate=(m,v)=>{if(v==null)return "";if(m.hi)return v>=m.good?"良い":(v<m.poor?"悪い":"要改善");return v<=m.good?"良い":(v>m.poor?"悪い":"要改善")};
+  const spMedian=a=>{const x=a.filter(v=>typeof v==="number"&&!isNaN(v)).sort((p,q)=>p-q);if(!x.length)return null;const h=x.length>>1;return x.length%2?x[h]:(x[h-1]+x[h])/2};
+  function spChange(m,b,a){
+    if(b==null||a==null)return {t:"—",c:""};
+    let better;
+    if(m.k==="score"){const d=a-b;if(Math.abs(d)<3)return {t:"ほぼ同じ",c:""};better=d>0}
+    else if(m.k==="cls"){const d=a-b;if(Math.abs(d)<0.02)return {t:"ほぼ同じ",c:""};better=d<0}
+    else{if(b===0&&a===0)return {t:"ほぼ同じ",c:""};const r=b===0?1:(a-b)/b;if(Math.abs(r)<0.05)return {t:"ほぼ同じ",c:""};better=r<0}
+    return better?{t:"良くなった",c:"up"}:{t:"悪くなった",c:"down"};
+  }
+  function spUrls(){
+    const u=$("sp_url").value.trim();const e=encodeURIComponent(u||"");
+    $("sp_m").href=u?"https://pagespeed.web.dev/analysis?url="+e+"&form_factor=mobile":"https://pagespeed.web.dev/";
+    $("sp_d").href=u?"https://pagespeed.web.dev/analysis?url="+e+"&form_factor=desktop":"https://pagespeed.web.dev/";
+  }
+  function spRender(){
+    spUrls();
+    const g=n=>spRuns.filter(r=>r.group===n);
+    $("sp_list").innerHTML=spRuns.length?
+      '<table class="spt"><thead><tr><th>区分</th><th>メモ</th>'+SM.map(m=>'<th>'+m.n+'</th>').join("")+'<th></th></tr></thead><tbody>'+
+      spRuns.map((r,i)=>'<tr><td>'+(r.group==="before"?"修正前":"修正後")+'</td><td class="memo">'+esc(r.note||"")+'</td>'+SM.map(m=>'<td class="num">'+spFmt(m.k,r.m[m.k])+'</td>').join("")+'<td><button data-del="'+i+'">削除</button></td></tr>').join("")+'</tbody></table>':
+      '<p class="note" style="padding:8px 10px">まだ記録がありません。PageSpeed Insights で測った数字を入れて、「この測定を記録」を押してください。</p>';
+    const B=g("before"),A=g("after");
+    if(!B.length||!A.length){$("sp_cmp").innerHTML='<p class="note">「修正前」と「修正後」を、それぞれ1回以上記録すると、ここに比べた結果が出ます。（いま：修正前 '+B.length+'回、修正後 '+A.length+'回）</p>';return}
+    let worse=0,better=0;
+    const rows=SM.map(m=>{
+      const b=spMedian(B.map(r=>r.m[m.k])),a=spMedian(A.map(r=>r.m[m.k]));
+      const ch=spChange(m,b,a);if(ch.c==="down")worse++;if(ch.c==="up")better++;
+      return '<tr><td>'+m.n+'</td><td class="num">'+spFmt(m.k,b)+'</td><td class="num">'+spFmt(m.k,a)+'</td><td class="ch '+ch.c+'">'+ch.t+'</td><td>'+spRate(m,a)+'</td></tr>';
+    }).join("");
+    let msg;
+    if(worse)msg='<p class="spwarn">悪くなった項目が '+worse+' 個あります。今回の修正を1つずつ元に戻して、どれが原因か確かめてください。（スライダー系のJSに defer を付けていないか、preload や fetchpriority を付けすぎていないか、最初の画像に lazy を付けていないかを見直します）</p>';
+    else if(better)msg='<p class="spok">悪くなった項目はなく、良くなった項目が '+better+' 個あります。</p>';
+    else msg='<p class="note">大きな変化はありませんでした（誤差の範囲です）。</p>';
+    const few=(B.length<3||A.length<3)?'<p class="note">修正前 '+B.length+'回、修正後 '+A.length+'回の記録です。3回以上ずつ測ると、ばらつきの影響が小さくなります。</p>':'';
+    $("sp_cmp").innerHTML=msg+'<div class="tw"><table class="spt"><thead><tr><th>項目</th><th>修正前（中央値）</th><th>修正後（中央値）</th><th>変化</th><th>修正後の評価</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+few;
+  }
+  function spNum(id,scale){const s=$(id).value.trim().replace(/[，,]/g,"").normalize("NFKC");if(s==="")return null;const v=parseFloat(s);return isNaN(v)?undefined:v*(scale||1)}
+  function spFromLH(j){
+    const lh=(j&&j.lighthouseResult)||j||{};const a=lh.audits||{};
+    const n=k=>a[k]&&typeof a[k].numericValue==="number"?a[k].numericValue:null;
+    const sc=lh.categories&&lh.categories.performance&&typeof lh.categories.performance.score==="number"?Math.round(lh.categories.performance.score*100):null;
+    return {score:sc,fcp:n("first-contentful-paint"),lcp:n("largest-contentful-paint"),tbt:n("total-blocking-time"),cls:n("cumulative-layout-shift"),si:n("speed-index")};
+  }
+  const spPut=(id,v,scale)=>{$(id).value=v==null?"":String(Math.round((v/(scale||1))*1000)/1000)};
+  $("sp_load").onclick=()=>{
+    try{const m=spFromLH(JSON.parse($("sp_json").value));
+      if(Object.values(m).every(v=>v==null)){$("sp_msg").textContent="数字が見つかりませんでした。Lighthouse のJSONか確認してください";return}
+      spPut("sp_score",m.score);spPut("sp_fcp",m.fcp,1000);spPut("sp_lcp",m.lcp,1000);spPut("sp_tbt",m.tbt);spPut("sp_cls",m.cls);spPut("sp_si",m.si,1000);
+      $("sp_msg").textContent="JSONから数字を読み取りました。内容を確認して、「この測定を記録」を押してください"}
+    catch(e){$("sp_msg").textContent="JSONを読み取れませんでした。ファイルの中身を全部コピーして貼り付けてください"}
+  };
+  $("sp_add").onclick=()=>{
+    const m={score:spNum("sp_score"),fcp:spNum("sp_fcp",1000),lcp:spNum("sp_lcp",1000),tbt:spNum("sp_tbt"),cls:spNum("sp_cls"),si:spNum("sp_si",1000)};
+    if(Object.values(m).some(v=>v===undefined)){$("sp_msg").textContent="数字として読めない欄があります。半角の数字で入れてください";return}
+    if(Object.values(m).every(v=>v===null)){$("sp_msg").textContent="数字を1つ以上入れてください";return}
+    if(m.score!=null&&(m.score<0||m.score>100)){$("sp_msg").textContent="点数は0〜100で入れてください";return}
+    spRuns.push({group:$("sp_group").value,note:$("sp_note").value.trim(),t:Date.now(),m});
+    spSave();spRender();
+    ["sp_score","sp_fcp","sp_lcp","sp_tbt","sp_cls","sp_si","sp_json"].forEach(i=>$(i).value="");
+    $("sp_msg").textContent="記録しました（"+(spRuns.length)+"件）";
+  };
+  $("sp_clear").onclick=()=>{if(!spRuns.length)return;if($("sp_clear").dataset.sure==="1"){spRuns=[];spSave();spRender();$("sp_clear").dataset.sure="";$("sp_clear").textContent="記録をすべて消す";$("sp_msg").textContent="記録を消しました";return}$("sp_clear").dataset.sure="1";$("sp_clear").textContent="本当に消す（もう一度押す）";setTimeout(()=>{$("sp_clear").dataset.sure="";$("sp_clear").textContent="記録をすべて消す"},4000)};
+  $("sp_list").addEventListener("click",e=>{const b=e.target.closest("button[data-del]");if(!b)return;spRuns.splice(+b.dataset.del,1);spSave();spRender()});
+  $("sp_url").addEventListener("input",()=>{spUrls();spSave()});
+  $("sp_copy").onclick=async()=>{
+    const B=spRuns.filter(r=>r.group==="before"),A=spRuns.filter(r=>r.group==="after");
+    if(!B.length||!A.length){$("sp_msg").textContent="「修正前」と「修正後」を、それぞれ1回以上記録してください";return}
+    let o="表示速度の比較（PageSpeed Insights）\nURL："+($("sp_url").value.trim()||"(未記入)")+"\n修正前 "+B.length+"回／修正後 "+A.length+"回（中央値で比較）\n";
+    const notes=[...new Set(A.map(r=>r.note).filter(Boolean))];if(notes.length)o+="修正内容："+notes.join(" / ")+"\n";
+    o+="\n";
+    SM.forEach(m=>{const b=spMedian(B.map(r=>r.m[m.k])),a=spMedian(A.map(r=>r.m[m.k]));o+=m.n+"：修正前 "+spFmt(m.k,b)+" → 修正後 "+spFmt(m.k,a)+"　"+spChange(m,b,a).t+"\n"});
+    try{await navigator.clipboard.writeText(o);$("sp_msg").textContent="比べた結果をコピーしました"}
+    catch(e){const ta=document.createElement("textarea");ta.value=o;ta.style.minHeight="160px";$("sp_msg").after(ta);ta.focus();ta.select();$("sp_msg").textContent="自動コピーできませんでした。下のテキストを Ctrl+C でコピーしてください"}
+  };
+  spRender();
+  $("sample").click();
+})();
+</script>
+
+</html>
