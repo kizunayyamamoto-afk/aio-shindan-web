@@ -108,6 +108,14 @@ dl.words dd{margin:0;overflow-wrap:anywhere}
 mark.del{background:var(--hi-bg);color:var(--hi);border-radius:2px;padding:0 2px}
 mark.add{background:var(--lo-bg);color:var(--ok);border-radius:2px;padding:0 2px;font-weight:500}
 .inv{font-family:var(--font-ui);font-size:.72rem;border:1px dashed currentColor;border-radius:2px;padding:0 3px}
+.usage{border-left:6px solid var(--accent)}
+.usage-lead{margin:0;font-size:1rem}
+ol.usage-steps{margin:0;padding:0;list-style:none;counter-reset:st;display:flex;flex-direction:column;gap:10px}
+ol.usage-steps li{counter-increment:st;display:grid;grid-template-columns:2.2em minmax(0,1fr);column-gap:10px;row-gap:2px}
+ol.usage-steps li::before{content:counter(st);grid-row:1/3;width:2em;height:2em;border-radius:50%;background:var(--accent);color:var(--accent-fg);font-weight:700;display:flex;align-items:center;justify-content:center;font-family:var(--font-data)}
+ol.usage-steps li>b{font-size:1rem}
+ol.usage-steps li>span{font-size:.9rem;color:var(--muted);grid-column:2}
+kbd{font-family:var(--font-data);font-size:.8em;background:var(--chip);border:1px solid var(--line);border-bottom-width:2px;border-radius:3px;padding:0 5px}
 .ver{font-family:var(--font-data);background:var(--chip);border-radius:3px;padding:1px 8px}
 ol.guide{margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:6px;font-size:.92rem}
 ul.pass{margin:8px 0 0;padding-left:1.2em;font-size:.88rem;color:var(--muted)}
@@ -123,12 +131,36 @@ details summary{cursor:pointer}
     <p class="lead">ページのHTMLソースを貼り付けると、AI検索に拾われやすくするための改善点を優先度順に出します。1回に診断できるのは1ページです。処理はこのページ内だけで行い、外部には送信しません。</p>
   </header>
 
+  <section class="panel usage" id="usage">
+    <h2>使い方（はじめにお読みください）</h2>
+    <p class="usage-lead">このツールは、Webページが「AI検索に読み取られやすいか」を調べて、直す点を教えます。難しい設定は要りません。次の順番で使ってください。</p>
+    <ol class="usage-steps">
+      <li><b>ページのソースをコピーする</b><span>調べたいページをブラウザで開き、<kbd>Ctrl</kbd>+<kbd>U</kbd>（Macは <kbd>Cmd</kbd>+<kbd>Option</kbd>+<kbd>U</kbd>）を押します。新しいタブに文字がたくさん出るので、<kbd>Ctrl</kbd>+<kbd>A</kbd>（全部を選ぶ）、<kbd>Ctrl</kbd>+<kbd>C</kbd>（コピー）の順に押します。</span></li>
+      <li><b>下の「1. ソースを入れる」に貼って、「診断する」を押す</b><span>入力欄をクリックして、<kbd>Ctrl</kbd>+<kbd>V</kbd>（貼り付け）。会社概要や店舗情報のページなら、「会社概要／店舗情報の正本ページ」にチェックを入れてから押します。</span></li>
+      <li><b>結果を見る</b><span>点数と、直す点の一覧が出ます。<b>高</b>（赤）は急ぎ、<b>中</b>（黄）、<b>低</b>（青）の順です。<b>【A】</b>はそのまま直せるもの、<b>【B】</b>はお客様に確認が必要なものです。各項目の「なぜ必要か・直し方の手順」に、やさしい手順が書いてあります。</span></li>
+      <li><b>直したら、チェックを付ける</b><span>直した項目は、「修正が完了した」にチェックを入れます。「修正一覧をコピー」を押すと、ノートやチケットにそのまま貼れる文ができます。</span></li>
+      <li><b>直ったか確認する</b><span>直したページのソースを、もう一度コピーします。「3. 修正後のソース」に貼って、「直っているか確認する」を押すと、直った項目と、まだ残っている項目が分かります。</span></li>
+      <li><b>表示速度を比べる（必要なとき）</b><span>「4. 表示速度」で、修正の前と後の速さを記録して、比べられます。</span></li>
+    </ol>
+    <details class="opt">
+      <summary>こんなときは</summary>
+      <ul class="pass">
+        <li><b>ログインが必要なページは？</b>　ログイン後の画面ではなく、だれでも見られる公開の画面のソースを使ってください。</li>
+        <li><b>貼り付けた内容は、どこかに送られますか？</b>　いいえ。お使いのブラウザの中だけで調べます。外部には送られません。</li>
+        <li><b>記録（チェックや速度）はどこに残りますか？</b>　お使いのブラウザの中だけです。ほかの人や、別のパソコンには、共有されません。</li>
+        <li><b>全ページを調べるには？</b>　1回に調べられるのは1ページです。ページごとに、同じ手順で調べてください。</li>
+        <li><b>数字が合わない、おかしいと思ったら？</b>　ページ下の「意見」の欄から、内容を送ってください。</li>
+      </ul>
+    </details>
+  </section>
+
   <section class="panel">
     <h2>バージョンと更新履歴</h2>
-    <p style="margin:0"><b class="ver" id="ver">v1.16</b>　最終更新 2026/10/14　<span class="note">更新の内容は、「更新履歴を見る」で確認できます。</span></p>
+    <p style="margin:0"><b class="ver" id="ver">v1.17</b>　最終更新 2026/10/19　<span class="note">更新の内容は、「更新履歴を見る」で確認できます。</span></p>
     <details>
       <summary>更新履歴を見る</summary>
       <ul class="pass" id="changelog">
+        <li><b>v1.17（2026/10/19）</b>　使い方を、ページの最初に、わかりやすく書き直した（6つの手順、ショートカットキー、色と【A】【B】の見方、「こんなときは」）。診断項目と判定基準は変更なし。</li>
         <li><b>v1.16（2026/10/14）</b>　「修正後のソースで、直っているか確認する」欄を追加（修正前の診断と比べて、直った／まだ残っている／新しく出た、を表示）。各指摘に「修正が完了した」のチェックと、完了件数の表示を追加。修正後のソースで直っていた項目は自動でチェックが付く。チェックは「→修正済」として修正一覧のコピーにも反映。ページのURL欄を追加（ページごとにチェックと修正前のソースをこのブラウザに保存）。診断項目と判定基準は変更なし。</li>
         <li><b>v1.15（2026/10/14）</b>　診断項目を追加：KIZUNA AIO設定「既定OGP画像URL」の確認。画像ファイルのURL（https:// で始まる .jpg / .png など）か、1200×630px 程度か。設定値の入力欄に、URL・幅・高さを追加。サイズは、入力した値、ページの og:image:width / height、ファイル名の数字の順で判断。</li>
         <li><b>v1.14（2026/10/14）</b>　「h1の直後に説明文がない」の指摘を廃止（WordPressの仕様で改善できないため）。h1直後が挨拶文・長すぎる場合の指摘は、そのまま。</li>
@@ -148,16 +180,6 @@ details summary{cursor:pointer}
         <li><b>v1.0（2026/09/29）</b>　初版。基本タグ・見出し・冒頭の書き方・構造化データ・画像・表記・会社概要ページ・KIZUNA AIO設定値の突き合わせを診断。</li>
       </ul>
     </details>
-  </section>
-
-  <section class="panel">
-    <h2>はじめに（使い方）</h2>
-    <ol class="guide">
-      <li>診断したいページをブラウザで開き、<b>Ctrl+U</b>（Macは Cmd+Option+U）でソースを表示して全選択コピーします。ログイン後の画面でなく、公開されている表示のソースを使ってください。</li>
-      <li>下の欄に貼り付けて「診断する」を押します。会社概要・店舗情報のページなら、チェックを入れてください。</li>
-      <li>結果の<b>【A】</b>はそのまま直せる項目、<b>【B】</b>はクライアント確認が必要な項目です。「修正一覧をコピー」で、ノートやチケットに貼れる形になります。</li>
-    </ol>
-    <p class="note">このツールは貼り付けたソースを読むだけで、サイトへの書き込みや外部への送信はしません。貼り付けた内容はページを閉じると消えます。1回に診断できるのは1ページです。全ページ分を順に診断して、表記ブレを見比べてください。</p>
   </section>
 
   <section class="panel">
