@@ -62,6 +62,26 @@ button:hover{filter:brightness(.95)}
 .fix{color:var(--fg)} .fix b{color:var(--accent)}
 .ev{font-family:var(--font-data);font-size:.76rem;background:var(--code);border-radius:3px;padding:6px 8px;display:flex;flex-direction:column;gap:2px;overflow-x:auto}
 .ev span{white-space:pre-wrap;word-break:break-all}
+.ihead{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.lvl{font-size:.78rem;font-weight:700;border-radius:3px;padding:2px 10px}
+.lvl-hi{background:var(--hi);color:var(--bg)} .lvl-mid{background:var(--mid-bg);color:var(--mid)} .lvl-lo{background:var(--lo-bg);color:var(--lo)}
+.who{font-size:.78rem;font-weight:700;border-radius:3px;padding:1px 9px;border:1px solid var(--line);background:var(--panel)}
+.who-designer{border-color:var(--accent);color:var(--accent)} .who-tech{color:var(--muted)} .who-client{border-style:dashed;color:var(--fg)}
+h3.ititle{margin:0;font-size:1.08rem;line-height:1.5;display:block}
+p.orig{margin:0;font-size:.75rem;color:var(--muted)}
+p.whatnow{margin:0;font-size:.85rem;color:var(--muted)}
+.fixbox{display:flex;gap:10px;align-items:flex-start;background:var(--lo-bg);border-radius:4px;padding:8px 12px;font-size:.95rem}
+.fixbox .k{flex:0 0 auto;font-size:.75rem;font-weight:700;background:var(--accent);color:var(--accent-fg);border-radius:3px;padding:1px 8px;margin-top:2px}
+.fixbox .t{min-width:0;overflow-wrap:anywhere;font-weight:500}
+.topbox{border:2px solid var(--accent);border-radius:6px;padding:12px 16px;display:flex;flex-direction:column;gap:8px}
+.topbox h3{margin:0;font-size:1.05rem}
+.topbox ol{margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:8px}
+.topbox li{display:block;line-height:1.6}
+.topbox li .who{margin-right:8px}
+.topbox li .fx{display:block;font-size:.85rem;color:var(--muted)}
+.fbar{display:flex;gap:6px;flex-wrap:wrap}
+button.fbtn{font-size:.85rem;padding:5px 12px}
+button.fbtn.active{background:var(--accent);color:var(--accent-fg);border-color:var(--accent);font-weight:700}
 .donerow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 label.done{display:inline-flex;gap:8px;align-items:center;font-size:.9rem;font-weight:700;cursor:pointer;background:var(--chip);border-radius:4px;padding:3px 10px}
 label.done input{width:1.1em;height:1.1em;margin:0}
@@ -156,10 +176,11 @@ details summary{cursor:pointer}
 
   <section class="panel">
     <h2>バージョンと更新履歴</h2>
-    <p style="margin:0"><b class="ver" id="ver">v1.17</b>　最終更新 2026/10/19　<span class="note">更新の内容は、「更新履歴を見る」で確認できます。</span></p>
+    <p style="margin:0"><b class="ver" id="ver">v1.18</b>　最終更新 2026/10/19　<span class="note">更新の内容は、「更新履歴を見る」で確認できます。</span></p>
     <details>
       <summary>更新履歴を見る</summary>
       <ul class="pass" id="changelog">
+        <li><b>v1.18（2026/10/19）</b>　デザイナー向けに、結果の見せ方を変更。「まず、この3つから直しましょう」を最初に表示。各指摘に、やさしい言い方の見出し、担当（デザイナーが直せる／技術担当に依頼／お客様に確認）、急ぎ度、「こう直す」の枠を表示。担当で絞り込むボタンを追加。くわしい手順は、閉じた状態で表示。診断項目と判定基準は変更なし。</li>
         <li><b>v1.17（2026/10/19）</b>　使い方を、ページの最初に、わかりやすく書き直した（6つの手順、ショートカットキー、色と【A】【B】の見方、「こんなときは」）。診断項目と判定基準は変更なし。</li>
         <li><b>v1.16（2026/10/14）</b>　「修正後のソースで、直っているか確認する」欄を追加（修正前の診断と比べて、直った／まだ残っている／新しく出た、を表示）。各指摘に「修正が完了した」のチェックと、完了件数の表示を追加。修正後のソースで直っていた項目は自動でチェックが付く。チェックは「→修正済」として修正一覧のコピーにも反映。ページのURL欄を追加（ページごとにチェックと修正前のソースをこのブラウザに保存）。診断項目と判定基準は変更なし。</li>
         <li><b>v1.15（2026/10/14）</b>　診断項目を追加：KIZUNA AIO設定「既定OGP画像URL」の確認。画像ファイルのURL（https:// で始まる .jpg / .png など）か、1200×630px 程度か。設定値の入力欄に、URL・幅・高さを追加。サイズは、入力した値、ページの og:image:width / height、ファイル名の数字の順で判断。</li>
@@ -686,7 +707,7 @@ details summary{cursor:pointer}
   function guideHtml(f){
     const g=GUIDE.find(x=>f.title.startsWith(x.m));if(!g)return "";
     const steps=typeof g.steps==="function"?g.steps(f):g.steps;
-    return '<details class="howto"'+(f.lv==="低"?"":" open")+'><summary>なぜ必要か・直し方の手順</summary><div class="hb">'+
+    return '<details class="howto"><summary>やさしい手順を見る（なぜ必要か・どう直すか）</summary><div class="hb">'+
       '<p class="why"><b>AIにとって</b>　'+esc(g.why)+'</p>'+
       (g.words?'<dl class="words">'+g.words.map(w=>'<dt>'+esc(w[0])+'</dt><dd>'+esc(w[1])+'</dd>').join("")+'</dl>':'')+
       '<ol class="steps">'+steps.map(s=>'<li>'+esc(s)+'</li>').join("")+'</ol>'+
@@ -714,20 +735,106 @@ details summary{cursor:pointer}
       '<div class="pl"><span class="k">変更提案</span><span class="t">'+esc(p.L)+'<mark class="add">'+(p.a===""?'<span class="inv">削除</span>':visH(p.a))+'</mark>'+esc(p.R)+'</span></div></div>').join("")+'</div>';
   }
   let last=null;
+  // ---- デザイナー向けの見せ方（診断の中身は変えない。見せ方だけ）
+  const WHO={designer:"デザイナーが直せる",tech:"技術担当に依頼",client:"お客様に確認"};
+  const LVLAB={高:"すぐ直す",中:"直したい",低:"余裕があれば"};
+  // [タイトルの先頭, やさしい言い方（{n}=最初の数字 {p}=最後の（）の中 {q}=「」の中）, 担当]
+  const META=[
+    ["画面の表示を止めるJavaScript","表示を遅くするスクリプトが、ページの頭に{n}個ある","tech"],
+    ["メインビジュアルがCSSの背景画像","一番上の大きな画像が、読み込みの遅れやすい作りになっている（{n}か所）","tech"],
+    ["ファーストビューより下の画像に fetchpriority","下のほうの画像に、「急ぎ」の印が付いている（{n}枚）","tech"],
+    ["ファーストビューより下の画像に loading","下のほうの画像が、「あとで読み込む」設定になっていない（{n}枚）","tech"],
+    ["既定OGP画像URLが","SNS用の画像のURLが、画像のURLになっていない","tech"],
+    ["既定OGP画像のサイズが","SNS用の画像のサイズが、横長の 1200×630px ではない（{p}）","designer"],
+    ["既定OGP画像のサイズを","SNS用の画像のサイズが、まだ確認できていない","designer"],
+    ["titleタグがない","ページの名前（title）が、設定されていない","tech"],
+    ["titleが長い","ページの名前（title）が、長すぎる（{n}文字）","designer"],
+    ["meta descriptionがない","検索結果に出る説明文が、設定されていない","designer"],
+    ["meta descriptionの長さ","検索結果に出る説明文の長さが、合っていない（{n}文字）","designer"],
+    ["noindexが指定","このページが、検索に出ない設定になっている","tech"],
+    ["canonicalがない","正しいURLを示す印（canonical）が、無い","tech"],
+    ["html の lang","言語の指定が、日本語になっていない","tech"],
+    ["h1がない","ページの大見出し（h1）が、無い","designer"],
+    ["h1が","大見出し（h1）が{n}個ある。1つにする","designer"],
+    ["見出しのレベルが飛んでいる","見出しの順番が飛んでいる（h2の次にh4、など）","designer"],
+    ["中身のない見出し","文字の入っていない見出しがある（{n}個）","designer"],
+    ["h1直後が挨拶文","最初の文が挨拶で、結論が後ろにある","designer"],
+    ["h1直後の文が長い","最初の文が長すぎて、結論が埋もれている（{n}文字）","designer"],
+    ["h2直後が前置き","節の最初が前置きで始まっている","designer"],
+    ["構造化データ（JSON-LD）がない","会社の情報をAIに伝えるデータが、無い","tech"],
+    ["JSON-LDに構文エラー","AIに伝えるデータに、書き間違いがある","tech"],
+    ["事業者を示す構造化データがない","このページに、会社を示すデータが無い","tech"],
+    ["事業者の構造化データに未設定","会社の情報のデータに、未入力の項目がある","tech"],
+    ["FAQ形式の見出し","よくある質問が、AIに伝わる形になっていない（{n}個）","tech"],
+    ["OGPが不足","SNSに貼ったときの表示情報が、足りない","tech"],
+    ["alt属性のない画像","説明文（alt）の無い画像がある（{n}枚）","designer"],
+    ["altが空","説明文（alt）が空の画像がある（{n}枚）","designer"],
+    ["altがファイル名","画像の説明文（alt）が、ファイル名などになっている","designer"],
+    ["「こちら」","「こちら」だけのリンクがある（{n}個）","designer"],
+    ["本文が少ない","ページの文章が、少ない（{n}文字）","client"],
+    ["記事に日付","記事に、日付が無い","designer"],
+    ["波ダッシュ","「〜」と「～」が、混ざっている","designer"],
+    ["全角チルダ","「～」が使われている（{n}か所）","designer"],
+    ["全角数字","全角の数字がある（{n}か所）。半角にする","designer"],
+    ["全角英字","全角の英字がある（{n}か所）。半角にする","designer"],
+    ["半角カナ","半角のカタカナがある（{n}か所）。全角にする","designer"],
+    ["ゼロ幅文字","目に見えない文字が入っている（{n}か所）","designer"],
+    ["全角スペース","全角のスペースがある（{n}か所）","designer"],
+    ["半角カッコ()と全角カッコ","カッコの種類が、混ざっている","designer"],
+    ["日本語文中に半角カッコ","文の中に、半角の( )がある（{n}か所）","designer"],
+    ["助詞の重複","同じ助詞が続いている。誤字かもしれない（{n}か所）","designer"],
+    ["電話番号の区切り","電話番号の区切りが、半角の「-」ではない","designer"],
+    ["郵便番号の表記","郵便番号の書き方が、そろっていない","designer"],
+    ["正式名称（法人格","会社の正式名称が、ページに書かれていない","client"],
+    ["代表者名が本文","代表者の名前が、ページに書かれていない","client"],
+    ["何をしている事業者","何をしている会社か分かる説明文が、無い","client"],
+    ["設定値「","設定の値（{q}）と、ページの表記が合っていない","client"]
+  ];
+  function metaOf(f){
+    const m=META.find(x=>f.title.startsWith(x[0]));
+    const nm=f.title.match(/(?<![A-Za-z])(\d+)/),pm=f.title.match(/（([^（）]+)）[^（）]*$/),qm=f.title.match(/「([^」]+)」/);
+    const say=m?m[1].replace("{n}",nm?nm[1]:"").replace("{p}",pm?pm[1]:"").replace("{q}",qm?qm[1]:""):f.title;
+    const who=f.kind==="B"?"client":(m?m[2]:"designer");
+    return {say:say,who:who};
+  }
+  function itemHtml(f,fi){
+    const mt=metaOf(f),withCk=fi>=0;
+    return '<article class="item '+LVC[f.lv]+((withCk&&isDone(f))?' done':'')+'" data-who="'+mt.who+'"'+(withCk?' data-i="'+fi+'"':'')+'>'+
+      '<div class="ihead"><span class="lvl lvl-'+LVC[f.lv]+'">'+LVLAB[f.lv]+'</span><span class="who who-'+mt.who+'">'+WHO[mt.who]+'</span><span class="tag">'+f.id+'</span></div>'+
+      '<h3 class="ititle">'+esc(mt.say)+'</h3>'+
+      (mt.say!==f.title?'<p class="orig">専門の呼び方：'+esc(f.title)+'</p>':'')+
+      (withCk?doneHtml(f,fi):'')+
+      (f.detail?'<p class="whatnow">'+esc(f.detail)+'</p>':'')+
+      pairHtml(f)+
+      (f.ev.length&&!(f.pairs&&f.pairs.length)?'<div class="ev">'+f.ev.map(e=>'<span>'+esc(e)+'</span>').join("")+'</div>':'')+
+      (f.fix?'<div class="fixbox"><span class="k">こう直す</span><span class="t">'+esc(f.fix)+'</span></div>':'')+
+      guideHtml(f)+'</article>';
+  }
+  function topHtml(r){
+    const todo=r.F.filter(f=>!isDone(f)).slice(0,3);
+    if(!r.F.length)return "";
+    if(!todo.length)return '<div class="topbox"><h3>すべて完了しました</h3></div>';
+    return '<div class="topbox"><h3>まず、この'+todo.length+'つから直しましょう</h3><ol>'+todo.map(f=>{const mt=metaOf(f);return '<li><span class="who who-'+mt.who+'">'+WHO[mt.who]+'</span><b>'+esc(mt.say)+'</b>'+(f.fix?'<span class="fx">'+esc(f.fix)+'</span>':'')+'</li>'}).join("")+'</ol></div>';
+  }
+  function filterHtml(r){
+    const n={designer:0,tech:0,client:0};r.F.forEach(f=>n[metaOf(f).who]++);
+    const b=(k,l,c)=>'<button class="fbtn'+(k==="all"?' active':'')+'" data-f="'+k+'">'+l+'（'+c+'）</button>';
+    return '<div class="fbar" role="group" aria-label="担当で絞り込む">'+b("all","すべて",r.F.length)+b("designer",WHO.designer,n.designer)+b("tech",WHO.tech,n.tech)+b("client",WHO.client,n.client)+'</div>';
+  }
   function render(r){
     last=r;
     const c={高:0,中:0,低:0};r.F.forEach(f=>c[f.lv]++);
     let h='<h2>2. 診断結果</h2><div class="sum"><div class="score">'+r.score+'<small> / 100</small></div><div class="bar" aria-hidden="true"><i style="width:'+r.score+'%"></i></div><div class="cnt">'+
       ["高","中","低"].map(k=>'<span class="pill '+LVC[k]+'">'+k+' '+c[k]+'</span>').join("")+'</div></div>';
     h+=progHtml(r);
-    h+='<p class="note">【A】そのまま直せるもの ／【B】依頼主への確認が要るもの。点数は目安です（高−9・中−4・低−1）。</p>';
+    h+='<p class="note">担当：<b>デザイナーが直せる</b>／<b>技術担当に依頼</b>／<b>お客様に確認</b>。【A】【B】の区別は、修正一覧のコピーに入ります。点数は目安です（高−9・中−4・低−1）。</p>';
     if(!r.F.length)h+='<p>指摘はありません。</p>';
-    else h+='<div class="row"><button id="openAll">手順をすべて開く</button><button id="closeAll">手順をすべて閉じる</button></div>';
-    if(r.F.length)h+='<div class="list">'+r.F.map((f,fi)=>'<article class="item '+LVC[f.lv]+(isDone(f)?' done':'')+'" data-i="'+fi+'"><h3><span class="tag">'+f.id+'</span>'+esc(f.title)+'<span class="pill '+LVC[f.lv]+'">'+f.lv+'</span></h3>'+doneHtml(f,fi)+
-      (f.detail?'<p>'+esc(f.detail)+'</p>':'')+
-      pairHtml(f)+
-      (f.ev.length&&!(f.pairs&&f.pairs.length)?'<div class="ev">'+f.ev.map(e=>'<span>'+esc(e)+'</span>').join("")+'</div>':'')+
-      (f.fix?'<p class="fix"><b>直し方</b>　'+esc(f.fix)+'</p>':'')+guideHtml(f)+'</article>').join("")+'</div>';
+    else{
+      h+=topHtml(r);
+      h+=filterHtml(r);
+      h+='<div class="row"><button id="openAll">手順をすべて開く</button><button id="closeAll">手順をすべて閉じる</button></div>';
+      h+='<div class="list">'+r.F.map((f,fi)=>itemHtml(f,fi)).join("")+'</div>';
+    }
     h+='<div class="row"><button class="primary" id="copy">修正一覧をコピー</button></div><div id="msg" role="status"></div>';
     h+='<p class="note"><b>直したあとの確認</b>　'+esc(CHECKAFTER)+'</p>';
     h+='<details><summary>問題なしの項目（'+r.P.length+'）</summary><ul class="pass">'+r.P.map(p=>'<li>'+esc(p)+'</li>').join("")+'</ul></details>';
@@ -735,6 +842,11 @@ details summary{cursor:pointer}
     $("result").innerHTML=h;
     updateProg(r);
     $("copy").onclick=copyList;
+    $("result").querySelectorAll(".fbtn").forEach(btn=>btn.onclick=()=>{
+      const k=btn.dataset.f;
+      $("result").querySelectorAll(".fbtn").forEach(x=>x.classList.toggle("active",x===btn));
+      $("result").querySelectorAll("article.item").forEach(a=>{a.hidden=(k!=="all"&&a.dataset.who!==k)});
+    });
     if($("openAll")){
       $("openAll").onclick=()=>document.querySelectorAll("details.howto").forEach(d=>d.open=true);
       $("closeAll").onclick=()=>document.querySelectorAll("details.howto").forEach(d=>d.open=false);
@@ -821,10 +933,7 @@ details summary{cursor:pointer}
     [["s_name","name"],["s_rep","rep"],["s_tel","tel"],["s_addr","addr"],["s_est","est"],["s_ogp","ogp"],["s_ogw","ogw"],["s_ogh","ogh"]].forEach(p=>{$(p[0]).value=o[p[1]]||""});
     $("sampleNote").hidden=true;go();
   };
-  const cardHtml=f=>'<article class="item '+LVC[f.lv]+'"><h3><span class="tag">'+f.id+'</span>'+esc(f.title)+'<span class="pill '+LVC[f.lv]+'">'+f.lv+'</span></h3>'+
-    (f.detail?'<p>'+esc(f.detail)+'</p>':'')+pairHtml(f)+
-    (f.ev.length&&!(f.pairs&&f.pairs.length)?'<div class="ev">'+f.ev.map(e=>'<span>'+esc(e)+'</span>').join("")+'</div>':'')+
-    (f.fix?'<p class="fix"><b>直し方</b>　'+esc(f.fix)+'</p>':'')+guideHtml(f)+'</article>';
+  const cardHtml=f=>itemHtml(f,-1);
   $("run2").onclick=()=>{
     const out=$("after_res"),s=AS[stKey()];
     if(!s||!s.before){out.innerHTML='<p class="note">先に、上の「1. ソースを入れる」に修正前のソースを貼り付けて、「診断する」を押してください。（「例に戻す」の診断は、比べる元になりません）</p>';return}
